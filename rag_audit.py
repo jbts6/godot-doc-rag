@@ -3,12 +3,13 @@
 审查 rag_index.py 生成的 chunk 质量。
 
 用法:
-    python rag_audit.py                  # 统计概览
-    python rag_audit.py --samples 20     # 随机抽样 20 个 chunk
-    python rag_audit.py --source gdscript  # 只看某个文件的 chunk
-    python rag_audit.py --short          # 只看过短的 chunk
-    python rag_audit.py --long           # 只看过长的 chunk
-    python rag_audit.py --export audit.csv  # 导出全部 chunk 到 CSV
+    uv run python rag_audit.py                  # 统计概览
+    uv run python rag_audit.py --samples 20     # 随机抽样 20 个 chunk
+    uv run python rag_audit.py --source gdscript  # 只看某个文件的 chunk
+    uv run python rag_audit.py --short          # 只看过短的 chunk
+    uv run python rag_audit.py --long           # 只看过长的 chunk
+    uv run python rag_audit.py --samples 20 --export audit.csv  # 导出 20 chunk 到 CSV
+    uv run python rag_audit.py --export audit.csv  # 导出全部 chunk 到 CSV
 """
 
 import argparse
@@ -139,86 +140,6 @@ def cmd_overview(data):
 
 
 # ═══════════════════════════════════════════════════════════════
-#  随机抽样
-# ═══════════════════════════════════════════════════════════════
-
-def cmd_samples(data, n: int, source_filter: str = None):
-    docs = data["documents"]
-    metas = data["metadatas"]
-    total = len(docs)
-
-    # 按来源过滤
-    if source_filter:
-        indices = [i for i in range(total) if source_filter.lower() in metas[i].get("source", "").lower()]
-        if not indices:
-            print(f"未找到匹配 '{source_filter}' 的 chunk")
-            return
-        print(f"匹配 '{source_filter}' 的 chunk 共 {len(indices)} 个")
-    else:
-        indices = list(range(total))
-
-    sampled = random.sample(indices, min(n, len(indices)))
-
-    for idx in sampled:
-        print_chunk(idx, docs[idx], metas[idx])
-
-    print(f"\n显示 {len(sampled)}/{len(indices)} 个 chunk")
-
-
-# ═══════════════════════════════════════════════════════════════
-#  短 chunk / 长 chunk
-# ═══════════════════════════════════════════════════════════════
-
-def cmd_filter_by_length(data, short: bool = False, long: bool = False):
-    docs = data["documents"]
-    metas = data["metadatas"]
-
-    if short:
-        threshold = SHORT_THRESHOLD
-        label = "过短"
-        indices = [i for i in range(len(docs)) if len(docs[i]) < threshold]
-    elif long:
-        threshold = LONG_THRESHOLD
-        label = "过长"
-        indices = [i for i in range(len(docs)) if len(docs[i]) > threshold]
-    else:
-        return
-
-    print(f"\n{label} chunk (< {threshold} 字符) 共 {len(indices)} 个:\n")
-
-    for idx in indices[:50]:  # 最多显示 50 个
-        print_chunk(idx, docs[idx], metas[idx])
-
-    if len(indices) > 50:
-        print(f"\n... 还有 {len(indices) - 50} 个未显示")
-
-
-# ═══════════════════════════════════════════════════════════════
-#  导出 CSV
-# ═══════════════════════════════════════════════════════════════
-
-def cmd_export(data, output: str):
-    docs = data["documents"]
-    metas = data["metadatas"]
-
-    with open(output, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.writer(f)
-        writer.writerow(["index", "source", "heading", "length", "content"])
-
-        for i in range(len(docs)):
-            writer.writerow([
-                i,
-                metas[i].get("source", ""),
-                heading(metas[i]),
-                len(docs[i]),
-                docs[i],
-            ])
-
-    print(f"已导出 {len(docs)} 条 chunk → {output}")
-    print(f"用 Excel 打开即可审查")
-
-
-# ═══════════════════════════════════════════════════════════════
 #  入口
 # ═══════════════════════════════════════════════════════════════
 
@@ -228,26 +149,63 @@ def main():
     parser.add_argument("--source", type=str, default=None, help="按来源文件名过滤")
     parser.add_argument("--short", action="store_true", help="只显示过短的 chunk")
     parser.add_argument("--long", action="store_true", help="只显示过长的 chunk")
-    parser.add_argument("--export", type=str, default=None, help="导出全部 chunk 到 CSV")
+    parser.add_argument("--export", type=str, default=None, help="导出 chunk 到 CSV")
     args = parser.parse_args()
 
     collection, data = load_all()
     print(f"集合 '{COLLECTION_NAME}' 共 {collection.count()} 条记录")
 
-    # 默认：显示概览
+    # 默认：无任何参数时显示概览
     if not any([args.samples, args.short, args.long, args.export]):
         cmd_overview(data)
         return
 
+    docs = data["documents"]
+    metas = data["metadatas"]
+
+    # ── 先筛选出目标 indices ──
+    if args.short:
+        indices = [i for i in range(len(docs)) if len(docs[i]) < SHORT_THRESHOLD]
+        print(f"\n过短 chunk (< {SHORT_THRESHOLD} 字符): {len(indices)} 个")
+    elif args.long:
+        indices = [i for i in range(len(docs)) if len(docs[i]) > LONG_THRESHOLD]
+        print(f"\n过长 chunk (> {LONG_THRESHOLD} 字符): {len(indices)} 个")
+    elif args.source:
+        indices = [i for i in range(len(docs)) if args.source.lower() in metas[i].get("source", "").lower()]
+        print(f"\n匹配 '{args.source}' 的 chunk: {len(indices)} 个")
+    else:
+        indices = list(range(len(docs)))
+
+    # ── 抽样 ──
+    if args.samples and args.samples < len(indices):
+        indices = random.sample(indices, args.samples)
+        print(f"随机抽样 {len(indices)} 个")
+
+    # ── 导出 ──
     if args.export:
-        cmd_export(data, args.export)
+        cmd_export_subset(docs, metas, indices, args.export)
 
-    if args.short or args.long:
-        cmd_filter_by_length(data, short=args.short, long=args.long)
+    # ── 终端显示 ──
+    if not args.export:
+        for idx in indices:
+            print_chunk(idx, docs[idx], metas[idx])
+        print(f"\n共 {len(indices)} 个 chunk")
 
-    if args.samples:
-        cmd_samples(data, args.samples, source_filter=args.source)
 
+def cmd_export_subset(docs, metas, indices, output):
+    """导出指定 indices 的 chunk 到 CSV。"""
+    with open(output, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f)
+        writer.writerow(["index", "source", "heading", "length", "content"])
+        for i in indices:
+            writer.writerow([
+                i,
+                metas[i].get("source", ""),
+                heading(metas[i]),
+                len(docs[i]),
+                docs[i],
+            ])
+    print(f"已导出 {len(indices)} 条 chunk → {output}")
 
 if __name__ == "__main__":
     main()
