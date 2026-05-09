@@ -32,26 +32,36 @@ uv run python rag_index.py
 # 1. 先看总体情况
 uv run python rag_audit.py
 
-# 2. 随机抽 20 个 chunk 看内容质量
+# 只导出随机 20 个
+uv run python rag_audit.py --samples 20 --export sample.csv
+
+# 只导出过短的
+uv run python rag_audit.py --short --export short.csv
+
+# 只导出某个文件的
+uv run python rag_audit.py --source gdscript --export gdscript.csv
+
+# 抽样 + 来源过滤 + 导出
+uv run python rag_audit.py --source physics --samples 10 --export physics_sample.csv
+
+# 终端显示（不导出）
 uv run python rag_audit.py --samples 20
-
-# 3. 只看 gdscript 相关的 chunk
-uv run python rag_audit.py --source gdscript --samples 10
-
-# 4. 看过短的 chunk（可能是噪音）
-uv run python rag_audit.py --short
-
-# 5. 看过长的 chunk（可能没切好）
-uv run python rag_audit.py --long
-
-# 6. 导出到 CSV，用 Excel 审查全部 chunk
-uv run python rag_audit.py --export audit.csv
+uv run python rag_audit.py --source gdscript --samples 5
 
 ```
 
 ## 添加 MCP
 
+调整 `top_k` 的默认值，可以比对token使用情况
+
 ```bash
 # 在项目目录下执行 windows / Mac 略有不同
 claude mcp add godot-docs -- ~/godot-doc-rag/.venv/Scripts/python.exe ~/git/godot-doc-rag/godot_rag_mcp.py
 ```
+
+## 删除 MCP
+
+```bash
+claude mcp remove godot-docs
+```
+
