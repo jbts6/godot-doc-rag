@@ -22,6 +22,8 @@ uv run python rts2md_batch.py
 
 ## 生成chroma_db
 
+该操作需要十几分钟，性能好的可以把`SPLIT_WORKERS`改大点，再手动删除一些无意义的Markdown，比如`404.md`，最后执行操作。
+
 ```bash
 uv run python rag_index.py
 ```
