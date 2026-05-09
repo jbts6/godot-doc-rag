@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__godot-docs__godot_search",
+      "mcp__godot-docs__godot_search_in_file"
+    ]
+  }
+}

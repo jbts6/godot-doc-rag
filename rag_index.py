@@ -1,0 +1,287 @@
+#!/usr/bin/env python3
+"""
+将 godot-markdown/ 下的 .md 文件分块并向量化存入 ChromaDB。
+
+优化版:
+1. 并行分块（多进程）
+2. 增大 embedding batch + 归一化 + 多线程
+3. 增大 ChromaDB 写入批次
+
+依赖:
+    pip install langchain-text-splitters chromadb sentence-transformers
+
+用法:
+    python rag_index.py
+"""
+
+import sys
+import time
+import hashlib
+from pathlib import Path
+from dataclasses import dataclass, field
+from concurrent.futures import ProcessPoolExecutor
+
+import chromadb
+from sentence_transformers import SentenceTransformer
+from langchain_text_splitters import (
+    MarkdownHeaderTextSplitter,
+    RecursiveCharacterTextSplitter,
+)
+
+
+# ═══════════════════════════════════════ 配置区 ═══════════════════════════════════════
+
+MD_ROOT = "godot-markdown"
+CHROMA_DIR = "chroma_db"
+COLLECTION_NAME = "godot_docs"
+EMBED_MODEL = "all-MiniLM-L6-v2"
+
+# 分块参数
+CHUNK_SIZE = 500
+CHUNK_OVERLAP = 100
+MIN_CHUNK_CHARS = 60
+MIN_ALPHA_RATIO = 0.3
+
+# 性能参数
+SPLIT_WORKERS = 4           # 分块并行进程数
+EMBED_BATCH = 1024          # embedding 批次大小
+DB_WRITE_BATCH = 5000       # ChromaDB 写入批次大小
+
+# ════════════════════════════════════════════════════════════════════════════════════
+
+
+HEADERS_TO_SPLIT_ON = [
+    ("#", "Header 1"),
+    ("##", "Header 2"),
+    ("###", "Header 3"),
+    ("####", "Header 4"),
+]
+
+
+def is_low_quality(text: str) -> bool:
+    stripped = text.strip()
+    if not stripped:
+        return True
+    if len(stripped) < MIN_CHUNK_CHARS:
+        return True
+    alpha_chars = sum(1 for c in stripped if c.isalpha())
+    if alpha_chars / len(stripped) < MIN_ALPHA_RATIO:
+        return True
+    lines = [l.strip() for l in stripped.split("\n") if l.strip()]
+    link_lines = sum(1 for l in lines if l.startswith("[") and "](" in l)
+    if len(lines) > 3 and link_lines / len(lines) > 0.7:
+        return True
+    return False
+
+
+# ═══════════════════════════════════════════════════════════════
+#  分块函数（可在子进程中调用）
+# ═══════════════════════════════════════════════════════════════
+
+def split_one_file(args: tuple) -> list[dict]:
+    """处理单个文件，返回 list[dict]（可被 pickle 序列化，支持多进程）。"""
+    file_str, md_root_str = args
+    file_path = Path(file_str)
+    md_root = Path(md_root_str)
+
+    text = file_path.read_text(encoding="utf-8")
+    rel_path = str(file_path.relative_to(md_root))
+
+    if not text.strip():
+        return []
+
+    md_splitter = MarkdownHeaderTextSplitter(
+        headers_to_split_on=HEADERS_TO_SPLIT_ON,
+        strip_headers=False,
+    )
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=CHUNK_SIZE,
+        chunk_overlap=CHUNK_OVERLAP,
+        separators=["\n\n", "\n", ". ", " ", ""],
+        length_function=len,
+    )
+
+    md_docs = md_splitter.split_text(text)
+    splits = text_splitter.split_documents(md_docs)
+
+    results = []
+    for doc in splits:
+        content = doc.page_content.strip()
+        if is_low_quality(content):
+            continue
+        meta = dict(doc.metadata)
+        meta["source"] = rel_path
+        results.append({"content": content, "metadata": meta})
+
+    return results
+
+
+def build_chunks(md_root: Path) -> list[dict]:
+    md_files = sorted(md_root.rglob("*.md"))
+    total_files = len(md_files)
+    print(f"扫描到 {total_files} 个 .md 文件")
+
+    tasks = [(str(f), str(md_root)) for f in md_files]
+    all_chunks = []
+
+    t0 = time.time()
+
+    if SPLIT_WORKERS <= 1:
+        # 单进程
+        for i, task in enumerate(tasks):
+            chunks = split_one_file(task)
+            all_chunks.extend(chunks)
+            if (i + 1) % 100 == 0:
+                print(f"  分块进度: {i + 1}/{total_files}")
+    else:
+        # 多进程
+        with ProcessPoolExecutor(max_workers=SPLIT_WORKERS) as executor:
+            results = executor.map(split_one_file, tasks, chunksize=8)
+            for i, chunks in enumerate(results):
+                all_chunks.extend(chunks)
+                if (i + 1) % 100 == 0:
+                    print(f"  分块进度: {i + 1}/{total_files}")
+
+    elapsed = time.time() - t0
+    print(f"分块完成: {len(all_chunks)} 个 chunk, 耗时 {elapsed:.1f}s")
+
+    if all_chunks:
+        sizes = [len(c["content"]) for c in all_chunks]
+        avg = sum(sizes) // len(sizes)
+        print(f"  平均: {avg} 字符, 最短: {min(sizes)}, 最长: {max(sizes)}")
+
+    return all_chunks
+
+
+# ═══════════════════════════════════════════════════════════════
+#  向量化 + 存储
+# ═══════════════════════════════════════════════════════════════
+
+def make_id(source: str, heading: str, index: int) -> str:
+    raw = f"{source}::{heading}::{index}"
+    return hashlib.md5(raw.encode()).hexdigest()
+
+
+def heading_path(meta: dict) -> str:
+    parts = []
+    for key in ("Header 1", "Header 2", "Header 3", "Header 4"):
+        if key in meta and meta[key]:
+            parts.append(meta[key])
+    return " > ".join(parts)
+
+
+def index_chunks(chunks: list[dict]):
+    print(f"\n加载 embedding 模型: {EMBED_MODEL}")
+    model = SentenceTransformer(EMBED_MODEL)
+
+    client = chromadb.PersistentClient(path=CHROMA_DIR)
+    try:
+        client.delete_collection(COLLECTION_NAME)
+        print(f"已删除旧集合: {COLLECTION_NAME}")
+    except Exception:
+        pass
+
+    collection = client.create_collection(
+        name=COLLECTION_NAME,
+        metadata={"hnsw:space": "cosine"},
+    )
+
+    total = len(chunks)
+    t0 = time.time()
+
+    # ── 阶段 1: 批量编码 ──
+    print(f"\n开始 embedding 编码 (batch_size={EMBED_BATCH})...")
+
+    all_embeddings = []
+    all_texts = []
+
+    for i in range(0, total, EMBED_BATCH):
+        batch = chunks[i : i + EMBED_BATCH]
+        texts = []
+        for c in batch:
+            h = heading_path(c["metadata"])
+            prefix = h + "\n" if h else ""
+            texts.append(prefix + c["content"])
+        all_texts.extend(texts)
+
+        emb = model.encode(
+            texts,
+            batch_size=EMBED_BATCH,
+            show_progress_bar=False,
+            normalize_embeddings=True,   # 预归一化，查询时更快
+        )
+        all_embeddings.extend(emb.tolist())
+
+        done = min(i + EMBED_BATCH, total)
+        print(f"  编码进度: {done}/{total}")
+
+    t_embed = time.time() - t0
+    print(f"编码完成: {t_embed:.1f}s")
+
+    # ── 阶段 2: 批量写入 ChromaDB ──
+    print(f"\n写入 ChromaDB (batch_size={DB_WRITE_BATCH})...")
+    t1 = time.time()
+
+    ids_all = []
+    docs_all = []
+    metas_all = []
+
+    for i, c in enumerate(chunks):
+        h = heading_path(c["metadata"])
+        ids_all.append(make_id(c["metadata"]["source"], h, i))
+        docs_all.append(c["content"])
+        metas_all.append(c["metadata"])
+
+    for start in range(0, total, DB_WRITE_BATCH):
+        end = min(start + DB_WRITE_BATCH, total)
+        collection.add(
+            ids=ids_all[start:end],
+            embeddings=all_embeddings[start:end],
+            documents=docs_all[start:end],
+            metadatas=metas_all[start:end],
+        )
+        print(f"  写入进度: {end}/{total}")
+
+    t_write = time.time() - t1
+    t_total = time.time() - t0
+
+    print(f"\n{'═' * 50}")
+    print(f"  完成!")
+    print(f"  集合:     {COLLECTION_NAME}")
+    print(f"  记录数:   {collection.count()}")
+    print(f"  分块耗时: 见上方")
+    print(f"  编码耗时: {t_embed:.1f}s")
+    print(f"  写入耗时: {t_write:.1f}s")
+    print(f"  总耗时:   {t_total:.1f}s")
+    print(f"  ChromaDB: {CHROMA_DIR}")
+    print(f"{'═' * 50}")
+
+
+# ═══════════════════════════════════════════════════════════════
+#  入口
+# ═══════════════════════════════════════════════════════════════
+
+def main():
+    md_root = Path(MD_ROOT).resolve()
+    if not md_root.is_dir():
+        print(f"错误: 目录不存在 → {md_root}", file=sys.stderr)
+        sys.exit(1)
+
+    chunks = build_chunks(md_root)
+    if not chunks:
+        print("没有分块，检查路径。")
+        sys.exit(1)
+
+    print("\n── 分块示例 ──")
+    for c in chunks[:3]:
+        print(f"  来源: {c['metadata'].get('source', '')}")
+        print(f"  标题: {heading_path(c['metadata'])}")
+        print(f"  长度: {len(c['content'])}")
+        print(f"  预览: {c['content'][:120]}...")
+        print()
+
+    index_chunks(chunks)
+
+
+if __name__ == "__main__":
+    main()
