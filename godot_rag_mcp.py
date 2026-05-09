@@ -68,7 +68,7 @@ def godot_search(query: str, top_k: int = 5) -> str:
     Search Godot engine docs by keyword or question. Returns relevant doc snippets with source and section info.
 
     Args:
-        query: search query (Chinese or English)
+        query: search query (English)
         top_k: number of results (default 5)
     """
     model = get_model()
@@ -110,7 +110,7 @@ def godot_search_in_file(query: str, source_pattern: str, top_k: int = 5) -> str
     Search Godot docs within files matching a path pattern (e.g. "gdscript", "physics/rigid_body").
 
     Args:
-        query: search query
+        query: search query (English)
         source_pattern: keyword to filter file paths
         top_k: number of results (default 5)
     """

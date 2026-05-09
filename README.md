@@ -55,8 +55,8 @@ uv run python rag_audit.py --source gdscript --samples 5
 调整 `top_k` 的默认值，可以比对token使用情况
 
 ```bash
-# 在项目目录下执行 windows / Mac 略有不同
-claude mcp add godot-docs -- ~/godot-doc-rag/.venv/Scripts/python.exe ~/git/godot-doc-rag/godot_rag_mcp.py
+# 记得修改PATH
+claude mcp add godot-docs -- PATH/godot-doc-rag/.venv/Scripts/python.exe PATH/godot-doc-rag/godot_rag_mcp.py
 ```
 
 ## 删除 MCP
