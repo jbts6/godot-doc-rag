@@ -27,7 +27,10 @@ EMBED_MODEL = "all-MiniLM-L6-v2"
 # instructions 精简到一句话
 mcp = FastMCP(
     "Godot Docs RAG",
-    instructions="检索本地 Godot 文档。回答 Godot 问题前先调 godot_search。",
+    instructions=(
+        "检索本地 Godot 文档。回答 Godot 问题前先调 godot_search。"
+        "回答用中文，代码和术语保留英文原文，不用逐句翻译文档。"
+    )
 )
 
 _collection = None
