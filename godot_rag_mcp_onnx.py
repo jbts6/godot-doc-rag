@@ -245,17 +245,54 @@ def _format_results(results: list[dict]) -> str:
 # ═══════════════════════════════════════════════════════════════
 
 @mcp.tool()
-def godot_search(query: str, top_k: int = 5) -> str:
+def godot_search(query: str, top_k: int = 8) -> str:
     """
     Search Godot engine docs by keyword or question.
     Uses hybrid retrieval (vector + BM25) for best results.
 
     Args:
         query: search query (English recommended for best results)
-        top_k: number of results to return (default 5)
+        top_k: number of results to return (default 8).
+               Use 5 for specific questions (e.g. "move_and_slide parameters").
+               Use 10-15 for broad topics (e.g. "Godot Node overview").
     """
     results = hybrid_search(query, top_k=min(top_k, 20))
     return _format_results(results)
+
+
+@mcp.tool()
+def godot_search_multi(query: str, top_k: int = 8) -> str:
+    """
+    Search Godot docs with automatic query expansion for broad topics.
+    Splits vague queries into multiple specific sub-queries and merges results.
+    Best for broad topics like "Node", "Physics", "UI system".
+
+    Args:
+        query: broad search topic (e.g. "Godot Node")
+        top_k: total results to return (default 8)
+    """
+    # 把宽泛查询拆成多个子查询
+    sub_queries = [
+        query,                          # 原始查询
+        f"{query} tutorial guide",      # 教程方向
+        f"{query} API reference",       # API 方向
+    ]
+
+    # 多轮召回，合并去重
+    all_items = {}
+    for sq in sub_queries:
+        vec = _vector_search(sq, 5)
+        bm25 = _bm25_search(sq, 5)
+        fused = _rrf_fusion(vec, bm25)
+        for item in fused:
+            t = item["text"]
+            if t not in all_items:
+                all_items[t] = item
+
+    # 按 RRF 分数排序
+    merged = sorted(all_items.values(), key=lambda x: -x["score"])
+    return _format_results(merged[:top_k])
+
 
 
 @mcp.tool()
