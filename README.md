@@ -33,43 +33,30 @@ uv run python rag_index.py
 
 ### 安装
 
-```bash
+## NVIDIA GPU 加速
+
+### 安装
+
 # 先卸载 CPU 版 PyTorch
 uv remove torch
 
-# 安装 CUDA 版 PyTorch（根据你的 CUDA 版本选择，以下以 12.x 为例）
+# 安装 CUDA 版 PyTorch（以下以 CUDA 12.x 为例）
 uv pip install torch --index-url https://download.pytorch.org/whl/cu124
 
 # 其余依赖不变
 uv pip install langchain-text-splitters chromadb sentence-transformers FlagEmbedding rank-bm25 fastmcp
-```
 
 ### rag_index.py 关键改动
 
-```python
 # 配置区
 EMBED_BATCH = 2048    # GPU 显存充足时可以调大（CPU 时为 512）
 
 # 加载模型时指定 device
 model = SentenceTransformer(EMBED_MODEL, device="cuda")
-```
 
-### rag_query.py / godot_rag_mcp.py 关键改动
+### rag_query.py 关键改动
 
-```python
-import torch
-
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
-# Embedding
-model = SentenceTransformer(EMBED_MODEL, device=DEVICE)
-
-# Reranker
-reranker = FlagReranker(
-    model_name_or_path=RERANK_MODEL,
-    use_fp16=True,
-    device=DEVICE,
-)
+EMBED_BATCH = 2048    # GPU 显存充足时可以调大（CPU 时为 512）
 ```
 
 ### 验证
@@ -266,5 +253,3 @@ claude mcp remove godot-docs
     ├ mcp__godot-docs__godot_search: 27 tokens
     └ mcp__godot-docs__godot_search_in_file: 34 tokens
 ```
-
-
