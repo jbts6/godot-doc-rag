@@ -94,7 +94,10 @@ print(torch.cuda.get_device_name()) # 你的显卡型号
 ## 检验chunk 质量
 
 ```bash
-# 1. 先看总体情况
+# 查看对比结果
+uv run pyton rag_query.py
+
+# 先看总体情况
 uv run python rag_audit.py
 
 # 只导出随机 20 个
