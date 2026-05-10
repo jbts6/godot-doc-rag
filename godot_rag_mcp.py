@@ -201,17 +201,20 @@ def _format_results(results: list[dict]) -> str:
 # ═══════════════════════════════════════════════════════════════
 
 @mcp.tool()
-def godot_search(query: str, top_k: int = 5) -> str:
+def godot_search(query: str, top_k: int = 8) -> str:
     """
     Search Godot engine docs by keyword or question.
     Uses hybrid retrieval (vector + BM25) for best results.
 
     Args:
         query: search query (English recommended for best results)
-        top_k: number of results to return (default 5)
+        top_k: number of results to return (default 8).
+               Use 5 for specific questions (e.g. "move_and_slide parameters").
+               Use 10-15 for broad topics (e.g. "Godot Node overview").
     """
     results = hybrid_search(query, top_k=min(top_k, 20))
     return _format_results(results)
+
 
 @mcp.tool()
 def godot_search_multi(query: str, top_k: int = 8) -> str:
