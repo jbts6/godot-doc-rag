@@ -4,3 +4,4 @@ chroma_db
 onnx_model
 *.pkl
 .DS_Store
+__pycache__
