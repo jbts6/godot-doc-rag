@@ -17,13 +17,14 @@ git submodule update --remote --recursive
 Markdown 会生成在 **godot-markdown** 文件夹
 
 ```bash
-uv run python rts2md_batch.py
+uv run python rst2md_batch.py
 ```
 
 ## 生成chroma_db
 如果你是N卡，请先看下面的**NVIDIA GPU 加速**。
 CPU跑要十几分钟，N卡会快非常多。
 不想构建的去看[issue](https://github.com/jbts6/godot-doc-rag/issues/1)
+如果保留全部Markdown的话，一共1580个文件,47k chunk，只留`classes`和`tutorials`的话，1469，少2000左右的chunk。
 
 ```bash
 uv run python rag_index.py
@@ -77,7 +78,6 @@ print(torch.cuda.get_device_name()) # 你的显卡型号
 | Rerank 12 条 | 200-500ms | 20-50ms |
 
 直接复制进 README 就行，以后换 N 卡按这个改三个地方就完事。
-```
 
 ## 检验chunk 质量
 
@@ -149,118 +149,103 @@ claude mcp remove godot-docs
 > 帮我查一下 Godot 的 CharacterBody3D 怎么用
 
 ```
-● CharacterBody3D 简介
+## CharacterBody3D 简介
 
-  CharacterBody3D 是 Godot
-  中专用于玩家/角色控制的物理体。它不受物理引擎影响（重力、摩擦力等需手动实现），但可以推动其他物理体。核心是提供了
-  move_and_slide() 和 move_and_collide() 等高阶移动 API。
+`CharacterBody3D` 是 Godot 中专用于**玩家/角色控制**的物理体。它**不受物理引擎影响**（重力、摩擦力等需手动实现），但可以推动其他物理体。核心是提供了 `move_and_slide()` 和 `move_and_collide()` 等高阶移动 API。
 
-  ---
-  核心属性
+---
 
-  ┌─────────────────────┬─────────┬─────────────────────────────────────────────────────────────────────┐
-  │        属性         │  类型   │                                说明                                 │
-  ├─────────────────────┼─────────┼─────────────────────────────────────────────────────────────────────┤
-  │ velocity            │ Vector3 │ 当前速度向量（m/s），会被 move_and_slide() 修改                     │
-  ├─────────────────────┼─────────┼─────────────────────────────────────────────────────────────────────┤
-  │ up_direction        │ Vector3 │ 向上的方向（默认 Vector3.UP），用于区分墙/地板/天花板               │
-  ├─────────────────────┼─────────┼─────────────────────────────────────────────────────────────────────┤
-  │ floor_max_angle     │ float   │ 最大可攀爬角度（弧度），超过此角度被视为墙                          │
-  ├─────────────────────┼─────────┼─────────────────────────────────────────────────────────────────────┤
-  │ floor_stop_on_slide │ bool    │ 在斜坡上是否停止滑动                                                │
-  ├─────────────────────┼─────────┼─────────────────────────────────────────────────────────────────────┤
-  │ motion_mode         │ enum    │ MOTION_MODE_GROUNDED（地面模式）或 MOTION_MODE_FLOATING（浮动模式） │
-  └─────────────────────┴─────────┴─────────────────────────────────────────────────────────────────────┘
+## 核心属性
 
-  ---
-  核心方法
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| `velocity` | `Vector3` | 当前速度向量（m/s），会被 `move_and_slide()` 修改 |
+| `up_direction` | `Vector3` | 向上的方向（默认 `Vector3.UP`），用于区分墙/地板/天花板 |
+| `floor_max_angle` | `float` | 最大可攀爬角度（弧度），超过此角度被视为墙 |
+| `floor_stop_on_slide` | `bool` | 在斜坡上是否停止滑动 |
+| `motion_mode` | `enum` | `MOTION_MODE_GROUNDED`（地面模式）或 `MOTION_MODE_FLOATING`（浮动模式） |
 
-  ┌─────────────────────────────┬──────────────────────┬──────────────────────────────────────┐
-  │            方法             │        返回值        │                 说明                 │
-  ├─────────────────────────────┼──────────────────────┼──────────────────────────────────────┤
-  │ move_and_slide()            │ bool                 │ 移动并自动处理碰撞/滑行/坡度（推荐） │
-  ├─────────────────────────────┼──────────────────────┼──────────────────────────────────────┤
-  │ move_and_collide(velocity)  │ KinematicCollision3D │ 单次移动碰撞检测（底层 API）         │
-  ├─────────────────────────────┼──────────────────────┼──────────────────────────────────────┤
-  │ is_on_floor()               │ bool                 │ 是否站在地面上                       │
-  ├─────────────────────────────┼──────────────────────┼──────────────────────────────────────┤
-  │ is_on_wall()                │ bool                 │ 是否撞到墙                           │
-  ├─────────────────────────────┼──────────────────────┼──────────────────────────────────────┤
-  │ is_on_ceiling()             │ bool                 │ 是否撞到天花板                       │
-  ├─────────────────────────────┼──────────────────────┼──────────────────────────────────────┤
-  │ get_slide_collision(idx)    │ KinematicCollision3D │ 获取某次碰撞的详细信息               │
-  ├─────────────────────────────┼──────────────────────┼──────────────────────────────────────┤
-  │ get_last_slide_collision()  │ KinematicCollision3D │ 获取最后一次碰撞信息                 │
-  ├─────────────────────────────┼──────────────────────┼──────────────────────────────────────┤
-  │ get_slide_collision_count() │ int                  │ 获取碰撞次数                         │
-  ├─────────────────────────────┼──────────────────────┼──────────────────────────────────────┤
-  │ get_platform_velocity()     │ Vector3              │ 获取移动平台的线速度                 │
-  ├─────────────────────────────┼──────────────────────┼──────────────────────────────────────┤
-  │ get_real_velocity()         │ Vector3              │ 获取实际移动速度（含坡度导致的偏移） │
-  └─────────────────────────────┴──────────────────────┴──────────────────────────────────────┘
+---
 
-  ---
-  基本用法示例（GDScript）
+## 核心方法
 
-  标准第三人称/第一人称移动
+| 方法 | 返回值 | 说明 |
+|------|--------|------|
+| `move_and_slide()` | `bool` | 移动并自动处理碰撞/滑行/坡度（推荐） |
+| `move_and_collide(velocity)` | `KinematicCollision3D` | 单次移动碰撞检测（底层 API） |
+| `is_on_floor()` | `bool` | 是否站在地面上 |
+| `is_on_wall()` | `bool` | 是否撞到墙 |
+| `is_on_ceiling()` | `bool` | 是否撞到天花板 |
+| `get_slide_collision(idx)` | `KinematicCollision3D` | 获取某次碰撞的详细信息 |
+| `get_last_slide_collision()` | `KinematicCollision3D` | 获取最后一次碰撞信息 |
+| `get_slide_collision_count()` | `int` | 获取碰撞次数 |
+| `get_platform_velocity()` | `Vector3` | 获取移动平台的线速度 |
+| `get_real_velocity()` | `Vector3` | 获取实际移动速度（含坡度导致的偏移） |
 
-  extends CharacterBody3D
+---
 
-  @export var speed = 5.0
-  @export var jump_velocity = 4.5
+## 基本用法示例（GDScript）
 
-  func _physics_process(delta):
-      # 添加重力
-      if not is_on_floor():
-          velocity.y -= gravity * delta  # gravity 来自 ProjectSettings
+### 标准第三人称/第一人称移动
 
-      # 处理跳跃
-      if Input.is_action_just_pressed("jump") and is_on_floor():
-          velocity.y = jump_velocity
+extends CharacterBody3D
 
-      # 获取输入方向
-      var input_dir = Input.get_vector("left", "right", "forward", "back")
-      var direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
+@export var speed = 5.0
+@export var jump_velocity = 4.5
 
-      # 水平移动
-      if direction:
-          velocity.x = direction.x * speed
-          velocity.z = direction.z * speed
-      else:
-          velocity.x = move_toward(velocity.x, 0, speed)
-          velocity.z = move_toward(velocity.z, 0, speed)
+func _physics_process(delta):
+    # 添加重力
+    if not is_on_floor():
+        velocity.y -= gravity * delta  # gravity 来自 ProjectSettings
 
-      # 执行移动
-      move_and_slide()
+    # 处理跳跃
+    if Input.is_action_just_pressed("jump") and is_on_floor():
+        velocity.y = jump_velocity
 
-  浮动模式（飞行/太空）
+    # 获取输入方向
+    var input_dir = Input.get_vector("left", "right", "forward", "back")
+    var direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
+    
+    # 水平移动
+    if direction:
+        velocity.x = direction.x * speed
+        velocity.z = direction.z * speed
+    else:
+        velocity.x = move_toward(velocity.x, 0, speed)
+        velocity.z = move_toward(velocity.z, 0, speed)
 
-  extends CharacterBody3D
+    # 执行移动
+    move_and_slide()
 
-  @export var speed = 5.0
-  var motion_mode = MotionMode.MOTION_MODE_FLOATING  # 所有碰撞都视为墙
+### 浮动模式（飞行/太空）
 
-  func _physics_process(delta):
-      var input_dir = Input.get_vector("left", "right", "forward", "back")
-      var direction = (transform.basis * Vector3(input_dir.x, input_dir.y, 0)).normalized()
+extends CharacterBody3D
 
-      if direction:
-          velocity = direction * speed
-      else:
-          velocity = velocity.move_toward(Vector3.ZERO, speed * delta)
+@export var speed = 5.0
+var motion_mode = MotionMode.MOTION_MODE_FLOATING  # 所有碰撞都视为墙
 
-      move_and_slide()
+func _physics_process(delta):
+    var input_dir = Input.get_vector("left", "right", "forward", "back")
+    var direction = (transform.basis * Vector3(input_dir.x, input_dir.y, 0)).normalized()
+    
+    if direction:
+        velocity = direction * speed
+    else:
+        velocity = velocity.move_toward(Vector3.ZERO, speed * delta)
 
-  ---
-  关键要点
+    move_and_slide()
 
-  1. 必须在 _physics_process() 中调用移动方法，不要直接在 _process() 里移动
-  2. 不要直接设置 position，应当通过 velocity + move_and_slide() 来移动，否则会绕过物理碰撞检测
-  3. 重力需要手动实现（velocity.y -= gravity * delta），引擎不会自动施加
-  4. move_and_slide() 会自动：处理坡度攀爬、沿墙滑行、检测落地/撞墙
-  5. velocity 是输入输出参数——传入期望速度，move_and_slide() 会根据碰撞修正它
+---
 
-  需要更具体的示例（如斜坡处理、爬楼梯、与 Area3D 交互等）可以继续问。
+## 关键要点
+
+1. **必须在 `_physics_process()`** 中调用移动方法，不要直接在 `_process()` 里移动
+2. **不要直接设置 `position`**，应当通过 `velocity` + `move_and_slide()` 来移动，否则会绕过物理碰撞检测
+3. 重力需要**手动实现**（`velocity.y -= gravity * delta`），引擎不会自动施加
+4. `move_and_slide()` 会自动：处理坡度攀爬、沿墙滑行、检测落地/撞墙
+5. `velocity` 是输入输出参数——传入期望速度，`move_and_slide()` 会根据碰撞修正它
+
+需要更具体的示例（如斜坡处理、爬楼梯、与 `Area3D` 交互等）可以继续问。
 
 ✻ Crunched for 40s
 
@@ -283,4 +268,5 @@ claude mcp remove godot-docs
      MCP tools · /mcp
      ├ mcp__godot-docs__godot_search: 34 tokens
      └ mcp__godot-docs__godot_search_in_file: 41 tokens
+     
 ```
