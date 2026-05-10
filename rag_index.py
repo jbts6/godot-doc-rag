@@ -1,24 +1,26 @@
 #!/usr/bin/env python3
 """
-将 godot-markdown/ 下的 .md 文件分块并向量化存入 ChromaDB。
+将 godot-markdown/ 下的 .md 文件分块并向量化存入 ChromaDB，同时构建 BM25 索引。
 
-优化版:
-1. 并行分块（多进程）
-2. 增大 embedding batch + 归一化 + 多线程
-3. 增大 ChromaDB 写入批次
+优化点:
+1. Markdown-aware 分块（保标题/代码块边界）
+2. all-mpnet-base-v2 英文强模型
+3. BM25 索引一并构建
+4. 多进程分块 + 大 batch 编码
 
 依赖:
-    pip install langchain-text-splitters chromadb sentence-transformers
+    uv pip install langchain-text-splitters chromadb sentence-transformers rank-bm25
 
 用法:
-    python rag_index.py
+    uv run python rag_index.py
 """
 
 import sys
+import re
 import time
 import hashlib
+import pickle
 from pathlib import Path
-from dataclasses import dataclass, field
 from concurrent.futures import ProcessPoolExecutor
 
 import chromadb
@@ -26,6 +28,7 @@ from sentence_transformers import SentenceTransformer
 from langchain_text_splitters import (
     MarkdownHeaderTextSplitter,
     RecursiveCharacterTextSplitter,
+    Language,
 )
 
 
@@ -34,7 +37,9 @@ from langchain_text_splitters import (
 MD_ROOT = "godot-markdown"
 CHROMA_DIR = "chroma_db"
 COLLECTION_NAME = "godot_docs"
-EMBED_MODEL = "all-MiniLM-L6-v2"
+BM25_PATH = "bm25_index.pkl"
+
+EMBED_MODEL = "sentence-transformers/all-mpnet-base-v2"
 
 # 分块参数
 CHUNK_SIZE = 500
@@ -43,9 +48,9 @@ MIN_CHUNK_CHARS = 60
 MIN_ALPHA_RATIO = 0.3
 
 # 性能参数
-SPLIT_WORKERS = 4           # 分块并行进程数
-EMBED_BATCH = 1024          # embedding 批次大小
-DB_WRITE_BATCH = 5000       # ChromaDB 写入批次大小
+SPLIT_WORKERS = 8
+EMBED_BATCH = 512
+DB_WRITE_BATCH = 5000
 
 # ════════════════════════════════════════════════════════════════════════════════════
 
@@ -56,6 +61,11 @@ HEADERS_TO_SPLIT_ON = [
     ("###", "Header 3"),
     ("####", "Header 4"),
 ]
+
+
+def english_tokenize(text: str) -> list[str]:
+    """英文分词：保留下划线和点号（move_and_slide、CharacterBody2D）"""
+    return re.findall(r"[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)*", text.lower())
 
 
 def is_low_quality(text: str) -> bool:
@@ -94,11 +104,12 @@ def split_one_file(args: tuple) -> list[dict]:
         headers_to_split_on=HEADERS_TO_SPLIT_ON,
         strip_headers=False,
     )
-    text_splitter = RecursiveCharacterTextSplitter(
+
+    # Markdown-aware 分块：优先在标题、代码块、列表项边界断开
+    text_splitter = RecursiveCharacterTextSplitter.from_language(
+        language=Language.MARKDOWN,
         chunk_size=CHUNK_SIZE,
         chunk_overlap=CHUNK_OVERLAP,
-        separators=["\n\n", "\n", ". ", " ", ""],
-        length_function=len,
     )
 
     md_docs = md_splitter.split_text(text)
@@ -127,14 +138,12 @@ def build_chunks(md_root: Path) -> list[dict]:
     t0 = time.time()
 
     if SPLIT_WORKERS <= 1:
-        # 单进程
         for i, task in enumerate(tasks):
             chunks = split_one_file(task)
             all_chunks.extend(chunks)
             if (i + 1) % 100 == 0:
                 print(f"  分块进度: {i + 1}/{total_files}")
     else:
-        # 多进程
         with ProcessPoolExecutor(max_workers=SPLIT_WORKERS) as executor:
             results = executor.map(split_one_file, tasks, chunksize=8)
             for i, chunks in enumerate(results):
@@ -154,7 +163,7 @@ def build_chunks(md_root: Path) -> list[dict]:
 
 
 # ═══════════════════════════════════════════════════════════════
-#  向量化 + 存储
+#  辅助函数
 # ═══════════════════════════════════════════════════════════════
 
 def make_id(source: str, heading: str, index: int) -> str:
@@ -169,6 +178,15 @@ def heading_path(meta: dict) -> str:
             parts.append(meta[key])
     return " > ".join(parts)
 
+
+def build_full_text(heading: str, content: str) -> str:
+    """拼接 heading 前缀，与向量检索保持一致"""
+    return (heading + "\n" + content) if heading else content
+
+
+# ═══════════════════════════════════════════════════════════════
+#  向量化 + ChromaDB 存储
+# ═══════════════════════════════════════════════════════════════
 
 def index_chunks(chunks: list[dict]):
     print(f"\n加载 embedding 模型: {EMBED_MODEL}")
@@ -193,27 +211,27 @@ def index_chunks(chunks: list[dict]):
     print(f"\n开始 embedding 编码 (batch_size={EMBED_BATCH})...")
 
     all_embeddings = []
-    all_texts = []
+    all_texts = []  # heading + content，用于 BM25 索引
 
     for i in range(0, total, EMBED_BATCH):
         batch = chunks[i : i + EMBED_BATCH]
         texts = []
         for c in batch:
             h = heading_path(c["metadata"])
-            prefix = h + "\n" if h else ""
-            texts.append(prefix + c["content"])
+            texts.append(build_full_text(h, c["content"]))
         all_texts.extend(texts)
 
         emb = model.encode(
             texts,
             batch_size=EMBED_BATCH,
             show_progress_bar=False,
-            normalize_embeddings=True,   # 预归一化，查询时更快
+            normalize_embeddings=True,
         )
         all_embeddings.extend(emb.tolist())
 
         done = min(i + EMBED_BATCH, total)
-        print(f"  编码进度: {done}/{total}")
+        if done % 2048 == 0 or done == total:
+            print(f"  编码进度: {done}/{total}")
 
     t_embed = time.time() - t0
     print(f"编码完成: {t_embed:.1f}s")
@@ -249,12 +267,38 @@ def index_chunks(chunks: list[dict]):
     print(f"  完成!")
     print(f"  集合:     {COLLECTION_NAME}")
     print(f"  记录数:   {collection.count()}")
-    print(f"  分块耗时: 见上方")
     print(f"  编码耗时: {t_embed:.1f}s")
     print(f"  写入耗时: {t_write:.1f}s")
     print(f"  总耗时:   {t_total:.1f}s")
     print(f"  ChromaDB: {CHROMA_DIR}")
     print(f"{'═' * 50}")
+
+    return all_texts
+
+
+# ═══════════════════════════════════════════════════════════════
+#  BM25 索引构建
+# ═══════════════════════════════════════════════════════════════
+
+def build_bm25_index(texts: list[str], metadatas: list[dict]):
+    """用英文分词构建 BM25 索引并持久化"""
+    from rank_bm25 import BM25Okapi
+
+    print(f"\n构建 BM25 索引 ({len(texts)} 条)...")
+    t0 = time.time()
+
+    tokenized_corpus = [english_tokenize(t) for t in texts]
+    bm25 = BM25Okapi(tokenized_corpus)
+
+    with open(BM25_PATH, "wb") as f:
+        pickle.dump({
+            "bm25": bm25,
+            "texts": texts,
+            "metadatas": metadatas,
+        }, f)
+
+    elapsed = time.time() - t0
+    print(f"BM25 索引已保存: {BM25_PATH} ({elapsed:.1f}s)")
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -280,7 +324,12 @@ def main():
         print(f"  预览: {c['content'][:120]}...")
         print()
 
-    index_chunks(chunks)
+    # 构建向量索引，同时收集 heading+content 文本
+    all_texts = index_chunks(chunks)
+
+    # 构建 BM25 索引
+    all_metadatas = [c["metadata"] for c in chunks]
+    build_bm25_index(all_texts, all_metadatas)
 
 
 if __name__ == "__main__":

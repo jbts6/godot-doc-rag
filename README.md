@@ -21,11 +21,74 @@ uv run python rts2md_batch.py
 ```
 
 ## 生成chroma_db
-
-该操作需要十几分钟，性能好的可以把`SPLIT_WORKERS`改大点，再手动删除一些无意义的Markdown，比如`404.md`，最后执行操作。
+如果你是N卡，请先看下面的**NVIDIA GPU 加速**。
+CPU跑要十几分钟，N卡会快非常多。
 
 ```bash
 uv run python rag_index.py
+```
+
+```markdown
+## NVIDIA GPU 加速
+
+### 安装
+
+```bash
+# 先卸载 CPU 版 PyTorch
+uv remove torch
+
+# 安装 CUDA 版 PyTorch（根据你的 CUDA 版本选择，以下以 12.x 为例）
+uv pip install torch --index-url https://download.pytorch.org/whl/cu124
+
+# 其余依赖不变
+uv pip install langchain-text-splitters chromadb sentence-transformers FlagEmbedding rank-bm25 fastmcp
+```
+
+### rag_index.py 关键改动
+
+```python
+# 配置区
+EMBED_BATCH = 2048    # GPU 显存充足时可以调大（CPU 时为 512）
+
+# 加载模型时指定 device
+model = SentenceTransformer(EMBED_MODEL, device="cuda")
+```
+
+### rag_query.py / godot_rag_mcp.py 关键改动
+
+```python
+import torch
+
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+# Embedding
+model = SentenceTransformer(EMBED_MODEL, device=DEVICE)
+
+# Reranker
+reranker = FlagReranker(
+    model_name_or_path=RERANK_MODEL,
+    use_fp16=True,
+    device=DEVICE,
+)
+```
+
+### 验证
+
+```python
+import torch
+print(torch.cuda.is_available())    # True
+print(torch.cuda.get_device_name()) # 你的显卡型号
+```
+
+### 性能对比（47k chunks, all-mpnet-base-v2）
+
+| | CPU | NVIDIA GPU |
+|---|---|---|
+| 建索引编码 | ~15 min | ~1 min |
+| 单次查询 encode | 50-80ms | 3-8ms |
+| Rerank 12 条 | 200-500ms | 20-50ms |
+
+直接复制进 README 就行，以后换 N 卡按这个改三个地方就完事。
 ```
 
 ## 检验chunk 质量
@@ -52,6 +115,8 @@ uv run python rag_audit.py --source gdscript --samples 5
 
 ```
 
+
+
 ## 添加 MCP
 
 调整 `top_k` 的默认值，可以比对token使用情况
@@ -67,13 +132,13 @@ claude mcp add godot-docs -- PATH/godot-doc-rag/.venv/Scripts/python.exe PATH/go
 claude mcp remove godot-docs
 ```
 
-# 效果演示
+## 效果演示
 
-每次返回内容并不完全相同，消耗的token可以作为参考，多次开新会话测试`Messages`在9K左右。
+每次返回内容并不完全相同，消耗的token可以作为参考，同一个问题多次新会话测试`Messages`在7-9K。
 
-Q: 帮我查一下 Godot 的 CharacterBody3D 怎么用
+> 帮我查一下 Godot 的 CharacterBody3D 怎么用
 
-A:
+```
 ● CharacterBody3D 使用指南
 
   概述
@@ -119,6 +184,7 @@ A:
           velocity.z = move_toward(velocity.z, 0, speed)
 
       move_and_slide()
+
 
   2. 关键方法
 
@@ -193,7 +259,9 @@ A:
                            ⛶ Free space: 128.5k (64.3%)
                            ⛝ Autocompact buffer: 33k tokens (16.5%)
 
-     MCP tools · /mcp
-     ├ mcp__godot-docs__godot_search: 27 tokens
-     └ mcp__godot-docs__godot_search_in_file: 34 tokens
+    MCP tools · /mcp
+    ├ mcp__godot-docs__godot_search: 27 tokens
+    └ mcp__godot-docs__godot_search_in_file: 34 tokens
+```
+
 
