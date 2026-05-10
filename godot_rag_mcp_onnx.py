@@ -2,23 +2,21 @@
 """
 Godot 文档 RAG — MCP Server (Mac / 无 torch 版)
 
-原理: 用 ONNX Runtime 做 embedding 推理，完全不依赖 PyTorch。
-建索引在 Windows 上完成，Mac 只负责查询。
-
 从 Windows 复制到 Mac 的文件:
-  - chroma_db/         向量数据库
-  - bm25_index.pkl     BM25 索引
-  - onnx_model/        ONNX 模型 (export_onnx.py 生成)
+  - chroma_db/
+  - bm25_index.pkl
+  - onnx_model/   (export_onnx.py 生成)
 
 Mac 安装:
-  uv pip install fastmcp chromadb rank-bm25 numpy onnxruntime transformers
+  uv pip install fastmcp chromadb rank-bm25 "numpy<2" onnxruntime transformers
 
 启动:
-  uv run python godot_tag_mcp_onnx.py
+  uv run python godot_rag_mcp.py
 """
 
 import re
 import pickle
+
 import numpy as np
 import chromadb
 import onnxruntime as ort
@@ -50,7 +48,7 @@ mcp = FastMCP(
     ),
 )
 
-# ── 全局单例（延迟加载，首次调用时才初始化）──
+# ── 全局单例（延迟加载）──
 
 _tokenizer = None
 _onnx_session = None
@@ -64,7 +62,6 @@ _collection = None
 # ═══════════════════════════════════════════════════════════════
 
 def english_tokenize(text: str) -> list[str]:
-    """英文分词，保留下划线和点号"""
     return re.findall(r"[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)*", text.lower())
 
 
@@ -87,22 +84,21 @@ def get_onnx_session():
 
 
 def encode_texts(texts: list[str]) -> list[list[float]]:
-    """ONNX 推理生成 embedding，不依赖 torch"""
+    """ONNX 推理，不需要 torch"""
     tokenizer = get_tokenizer()
     session = get_onnx_session()
 
     inputs = tokenizer(texts, padding=True, truncation=True, return_tensors="np")
 
-    # 只传 ONNX 模型实际接受的输入
     ort_inputs = {k: v for k, v in inputs.items() if k in _input_names}
     outputs = session.run(None, ort_inputs)
 
     # Mean pooling
-    hidden = outputs[0]                          # (batch, seq_len, hidden)
-    mask = inputs["attention_mask"][..., None]    # (batch, seq_len, 1)
+    hidden = outputs[0]
+    mask = inputs["attention_mask"][..., None]
     pooled = (hidden * mask).sum(axis=1) / mask.sum(axis=1)
 
-    # L2 归一化（建索引时 normalize_embeddings=True，查询时保持一致）
+    # L2 归一化
     norms = np.linalg.norm(pooled, axis=1, keepdims=True)
     normalized = pooled / norms
 
@@ -168,7 +164,6 @@ def _bm25_search(query: str, top_k: int) -> list[dict]:
 
 
 def _rrf_fusion(vector_results: list[dict], bm25_results: list[dict]) -> list[dict]:
-    """Reciprocal Rank Fusion"""
     score_map: dict[str, float] = {}
     meta_map: dict[str, dict] = {}
     source_map: dict[str, str] = {}
@@ -198,7 +193,6 @@ def hybrid_search(
     top_k: int = FINAL_TOP_N_DEFAULT,
     source_filter: str | None = None,
 ) -> list[dict]:
-    """向量 + BM25 → RRF 融合"""
     vector_results = _vector_search(query, VECTOR_TOP_K)
     bm25_results = _bm25_search(query, BM25_TOP_K)
     fused = _rrf_fusion(vector_results, bm25_results)
@@ -268,7 +262,6 @@ def godot_search(query: str, top_k: int = 5) -> str:
 def godot_search_in_file(query: str, source_pattern: str, top_k: int = 5) -> str:
     """
     Search Godot docs within files matching a path pattern.
-    Useful for narrowing results to a specific topic area.
 
     Args:
         query: search query (English recommended)

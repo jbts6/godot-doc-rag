@@ -109,11 +109,12 @@ uv run python rag_audit.py --source gdscript --samples 5
 
 ## 添加 MCP
 
-调整 `top_k` 的默认值，可以比对token使用情况
+调整 `top_k` 的默认值，可以比对token使用情况。
+如果你和我一样是 intel Mac 并且更新到了 MaxOS 26，那请使用`godot_tag_mcp_onnx.py`
 
 ```bash
 # 记得修改PATH
-claude mcp add godot-docs -- PATH/godot-doc-rag/.venv/Scripts/python.exe PATH/godot-doc-rag/godot_rag_mcp.py
+claude mcp add godot-docs -- ~/Site/godot-doc-rag/.venv/Scripts/python.exe ~/Site/godot-doc-rag/godot_rag_mcp_onnx.py
 ```
 
 ## 删除 MCP

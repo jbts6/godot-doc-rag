@@ -3,3 +3,4 @@ chroma_db
 *.csv
 onnx_model
 *.pkl
+.DS_Store
