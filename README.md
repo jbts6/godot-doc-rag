@@ -117,6 +117,24 @@ uv run python rag_audit.py --source gdscript --samples 5
 claude mcp add godot-docs -- uv run python C:/git/godot-doc-rag/godot_rag_mcp.py
 ```
 
+如果是用于其他IDE，可以参考
+```
+{
+  "mcpServers": {
+    "godot-docs": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "C:\\git\\godot-doc-rag",
+        "run",
+        "python",
+        "godot_rag_mcp.py"
+      ]
+    }
+  }
+}
+```
+
 ## 删除 MCP
 
 ```bash
