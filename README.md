@@ -23,6 +23,7 @@ uv run python rts2md_batch.py
 ## 生成chroma_db
 如果你是N卡，请先看下面的**NVIDIA GPU 加速**。
 CPU跑要十几分钟，N卡会快非常多。
+不想构建的去看[issue](https://github.com/jbts6/godot-doc-rag/issues/1)
 
 ```bash
 uv run python rag_index.py
