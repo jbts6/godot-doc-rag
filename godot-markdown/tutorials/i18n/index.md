@@ -1,0 +1,6 @@
+allow_comments
+False
+
+# Internationalization
+
+internationalizing_games localization_using_spreadsheets localization_using_gettext locales pseudolocalization

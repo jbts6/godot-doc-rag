@@ -1,0 +1,6 @@
+allow_comments
+False
+
+# Networking
+
+high_level_multiplayer http_request_class http_client_class ssl_certificates websocket webrtc

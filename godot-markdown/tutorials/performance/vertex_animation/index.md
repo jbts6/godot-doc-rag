@@ -1,0 +1,6 @@
+allow_comments
+False
+
+# Animating thousands of objects
+
+animating_thousands_of_fish controlling_thousands_of_fish

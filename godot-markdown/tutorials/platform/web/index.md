@@ -1,0 +1,6 @@
+allow_comments
+False
+
+# Web
+
+javascript_bridge html5_shell_classref customizing_html5_shell

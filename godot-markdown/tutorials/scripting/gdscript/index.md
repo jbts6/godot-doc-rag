@@ -1,0 +1,6 @@
+allow_comments
+False
+
+# GDScript
+
+gdscript_basics gdscript_advanced gdscript_exports gdscript_documentation_comments gdscript_styleguide static_typing warning_system gdscript_format_string

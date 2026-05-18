@@ -1,0 +1,6 @@
+allow_comments
+False
+
+# Debug
+
+overview_of_debugging_tools output_panel debugger_panel the_profiler objectdb_profiler custom_performance_monitors
