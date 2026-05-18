@@ -4,7 +4,7 @@
 
 用法:
     uv run python rst2md_batch.py
-    uv run python rst2md_batch.py -i godot-docs -o godot-markdown
+    uv run python rst2md_batch.py -i godot-docs -o docs
     uv run python rst2md_batch.py --dry-run
     uv run python rst2md_batch.py -w 8
 """
@@ -108,8 +108,8 @@ def main():
     )
     parser.add_argument(
         "-o", "--output",
-        default="godot-markdown",
-        help="输出目录 (默认: godot-markdown)",
+        default="docs",
+        help="输出目录 (默认: docs)",
     )
     parser.add_argument(
         "-w", "--workers",

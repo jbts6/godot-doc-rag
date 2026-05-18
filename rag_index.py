@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-将 godot-markdown/ 下的 .md 文件分块并向量化存入 ChromaDB，同时构建 BM25 索引。
+将 docs/ 下的 .md 文件分块并向量化存入 ChromaDB，同时构建 BM25 索引。
 
 优化点:
 1. Markdown-aware 分块（保标题/代码块边界）
@@ -34,7 +34,7 @@ from langchain_text_splitters import (
 
 # ═══════════════════════════════════════ 配置区 ═══════════════════════════════════════
 
-MD_ROOT = "godot-markdown"
+MD_ROOT = "docs"
 CHROMA_DIR = "chroma_db"
 COLLECTION_NAME = "godot_docs"
 BM25_PATH = "bm25_index.pkl"

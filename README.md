@@ -1,7 +1,7 @@
 # godot-doc-rag
 
 ## 文档查询
-godot-markdown 文件夹下是转换后的Markdown文件。
+docs 文件夹下是转换后的Markdown文件。
 
 ## 安装依赖
 需要先安装`uv`后，执行`uv venv`
@@ -17,7 +17,7 @@ git submodule update --remote --recursive
 ```
 
 ## 转成Markdown
-Markdown 会生成在 **godot-markdown** 文件夹
+Markdown 会生成在 **docs** 文件夹
 
 ```bash
 uv run python rst2md_batch.py
