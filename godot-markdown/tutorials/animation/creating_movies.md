@@ -219,7 +219,7 @@ You can trim parts of the video you don't want to keep after the video is record
 
     ffmpeg -i input.avi -ss 00:00:12.10 -t 00:00:05.20 -crf 15 output.mp4
 
-Cutting videos can also be done with the GUI tool [LosslessCut](https://mifi.github.io/lossless-cut/).
+Cutting videos can also be done with the GUI tool [LosslessCut](https://losslesscut.app/).
 
 ### Resizing video
 

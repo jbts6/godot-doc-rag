@@ -1,5 +1,8 @@
 # godot-doc-rag
 
+## 文档查询
+godot-markdown 文件夹下是转换后的Markdown文件。
+
 ## 安装依赖
 需要先安装`uv`后，执行`uv venv`
 

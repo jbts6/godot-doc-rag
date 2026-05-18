@@ -495,7 +495,7 @@ If you've saved an ArrayMesh resource to a `.res` or `.tres` file, the format us
 
 ## List of automatically renamed methods, properties, signals and constants
 
-The [editor/renames_map_3_to_4.cpp](https://github.com/godotengine/godot/blob/master/editor/renames_map_3_to_4.cpp) source file lists all automatic renames performed by the project upgrade tool. Lines that are commented out refer to API renames that `cannot be performed automatically <doc_upgrading_to_godot_4_manual_rename>`.
+The [editor/project_upgrade/renames_map_3_to_4.cpp](https://github.com/godotengine/godot/blob/master/editor/project_upgrade/renames_map_3_to_4.cpp) source file lists all automatic renames performed by the project upgrade tool. Lines that are commented out refer to API renames that `cannot be performed automatically <doc_upgrading_to_godot_4_manual_rename>`.
 
 ## Porting editor settings
 

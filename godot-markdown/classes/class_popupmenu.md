@@ -231,14 +231,14 @@ classref-item-separator
 
 classref-property
 
-`int<class_int>` **search_bar_enabled_on_item_count** = `0` `🔗<class_PopupMenu_property_search_bar_enabled_on_item_count>`
+`bool<class_bool>` **search_bar_enabled** = `false` `🔗<class_PopupMenu_property_search_bar_enabled>`
 
 classref-property-setget
 
-- `void (No return value.)` **set_search_bar_enabled_on_item_count**(value: `int<class_int>`)
-- `int<class_int>` **get_search_bar_enabled_on_item_count**()
+- `void (No return value.)` **set_search_bar_enabled**(value: `bool<class_bool>`)
+- `bool<class_bool>` **is_search_bar_enabled**()
 
-Enables the **PopupMenu** search bar if the item count is greater than `0`.
+If `true`, shows a search bar at the top of the **PopupMenu** for filtering items. See `search_bar_min_item_count<class_PopupMenu_property_search_bar_min_item_count>` for dynamically controlling its visibility based on the number of items.
 
 **Note:** When enabled, `allow_search<class_PopupMenu_property_allow_search>` is ignored.
 
@@ -269,6 +269,19 @@ classref-property-setget
 - `int<class_int>` **get_search_bar_fuzzy_search_max_misses**()
 
 Sets the maximum number of mismatches allowed in each search result when fuzzy searching is enabled for the **PopupMenu** search bar. Any item with more mismatches will be hidden from the search results.
+
+classref-item-separator
+
+classref-property
+
+`int<class_int>` **search_bar_min_item_count** = `0` `🔗<class_PopupMenu_property_search_bar_min_item_count>`
+
+classref-property-setget
+
+- `void (No return value.)` **set_search_bar_min_item_count**(value: `int<class_int>`)
+- `int<class_int>` **get_search_bar_min_item_count**()
+
+Sets the minimum number of items required for the search bar to be visible. `search_bar_enabled<class_PopupMenu_property_search_bar_enabled>` must be `true` for this to have any effect.
 
 classref-item-separator
 
@@ -759,14 +772,6 @@ classref-method
 `bool<class_bool>` **is_native_menu**() `const (This method has no side effects. It doesn't modify any of the instance's member variables.)` `🔗<class_PopupMenu_method_is_native_menu>`
 
 Returns `true` if the system native menu is supported and currently used by this **PopupMenu**.
-
-classref-item-separator
-
-classref-method
-
-`bool<class_bool>` **is_search_bar_enabled**() `const (This method has no side effects. It doesn't modify any of the instance's member variables.)` `🔗<class_PopupMenu_method_is_search_bar_enabled>`
-
-Returns `true` if search bar is currently enabled.
 
 classref-item-separator
 

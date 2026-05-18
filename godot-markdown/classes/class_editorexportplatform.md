@@ -141,9 +141,9 @@ classref-item-separator
 
 classref-method
 
-`Error<enum_@GlobalScope_Error>` **export_project**(preset: `EditorExportPreset<class_EditorExportPreset>`, debug: `bool<class_bool>`, path: `String<class_String>`, flags: `BitField (This value is an integer composed as a bitmask of the following flags.)`\[`DebugFlags<enum_EditorExportPlatform_DebugFlags>`\] = 0) `🔗<class_EditorExportPlatform_method_export_project>`
+`Error<enum_@GlobalScope_Error>` **export_project**(preset: `EditorExportPreset<class_EditorExportPreset>`, debug: `bool<class_bool>`, path: `String<class_String>`, flags: `BitField (This value is an integer composed as a bitmask of the following flags.)`\[`DebugFlags<enum_EditorExportPlatform_DebugFlags>`\] = 0, notify: `bool<class_bool>` = true) `🔗<class_EditorExportPlatform_method_export_project>`
 
-Creates a full project at `path` for the specified `preset`.
+Creates a full project at `path` for the specified `preset`. If `notify` is `true`, plugins using `EditorExportPlugin._export_begin()<class_EditorExportPlugin_private_method__export_begin>` will be called during the process.
 
 classref-item-separator
 

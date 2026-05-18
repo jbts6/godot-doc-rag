@@ -41,7 +41,7 @@ classref-descriptions-group
 
 classref-signal
 
-**button_pressed**(name: `String<class_String>`) `🔗<class_XRPositionalTracker_signal_button_pressed>`
+**button_pressed**(action_name: `String<class_String>`) `🔗<class_XRPositionalTracker_signal_button_pressed>`
 
 Emitted when a button on this tracker is pressed. Note that many XR runtimes allow other inputs to be mapped to buttons.
 
@@ -49,7 +49,7 @@ classref-item-separator
 
 classref-signal
 
-**button_released**(name: `String<class_String>`) `🔗<class_XRPositionalTracker_signal_button_released>`
+**button_released**(action_name: `String<class_String>`) `🔗<class_XRPositionalTracker_signal_button_released>`
 
 Emitted when a button on this tracker is released.
 
@@ -57,7 +57,7 @@ classref-item-separator
 
 classref-signal
 
-**input_float_changed**(name: `String<class_String>`, value: `float<class_float>`) `🔗<class_XRPositionalTracker_signal_input_float_changed>`
+**input_float_changed**(action_name: `String<class_String>`, value: `float<class_float>`) `🔗<class_XRPositionalTracker_signal_input_float_changed>`
 
 Emitted when a trigger or similar input on this tracker changes value.
 
@@ -65,7 +65,7 @@ classref-item-separator
 
 classref-signal
 
-**input_vector2_changed**(name: `String<class_String>`, vector: `Vector2<class_Vector2>`) `🔗<class_XRPositionalTracker_signal_input_vector2_changed>`
+**input_vector2_changed**(action_name: `String<class_String>`, vector: `Vector2<class_Vector2>`) `🔗<class_XRPositionalTracker_signal_input_vector2_changed>`
 
 Emitted when a thumbstick or thumbpad on this tracker moves.
 

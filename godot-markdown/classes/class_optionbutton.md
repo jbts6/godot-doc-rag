@@ -74,19 +74,6 @@ classref-item-separator
 
 classref-property
 
-`int<class_int>` **enable_search_bar_on_item_count** = `0` `🔗<class_OptionButton_property_enable_search_bar_on_item_count>`
-
-classref-property-setget
-
-- `void (No return value.)` **set_search_bar_enabled_on_item_count**(value: `int<class_int>`)
-- `int<class_int>` **get_search_bar_enabled_on_item_count**()
-
-Enables the `PopupMenu<class_PopupMenu>` search bar if the item count is greater than `0`.
-
-classref-item-separator
-
-classref-property
-
 `bool<class_bool>` **fit_to_longest_item** = `true` `🔗<class_OptionButton_property_fit_to_longest_item>`
 
 classref-property-setget
@@ -165,6 +152,19 @@ classref-item-separator
 
 classref-property
 
+`bool<class_bool>` **search_bar_enabled** = `false` `🔗<class_OptionButton_property_search_bar_enabled>`
+
+classref-property-setget
+
+- `void (No return value.)` **set_search_bar_enabled**(value: `bool<class_bool>`)
+- `bool<class_bool>` **is_search_bar_enabled**()
+
+If `true`, shows a search bar at the top of the `PopupMenu<class_PopupMenu>` for filtering items. See `search_bar_min_item_count<class_OptionButton_property_search_bar_min_item_count>` for dynamically controlling its visibility based on the number of items.
+
+classref-item-separator
+
+classref-property
+
 `bool<class_bool>` **search_bar_fuzzy_search_enabled** = `true` `🔗<class_OptionButton_property_search_bar_fuzzy_search_enabled>`
 
 classref-property-setget
@@ -188,6 +188,19 @@ classref-property-setget
 - `int<class_int>` **get_search_bar_fuzzy_search_max_misses**()
 
 Sets the maximum number of mismatches allowed in each search result when fuzzy searching is enabled for the `PopupMenu<class_PopupMenu>` search bar. Any item with more mismatches will be hidden from the search results.
+
+classref-item-separator
+
+classref-property
+
+`int<class_int>` **search_bar_min_item_count** = `0` `🔗<class_OptionButton_property_search_bar_min_item_count>`
+
+classref-property-setget
+
+- `void (No return value.)` **set_search_bar_min_item_count**(value: `int<class_int>`)
+- `int<class_int>` **get_search_bar_min_item_count**()
+
+Sets the minimum number of items required for the `PopupMenu<class_PopupMenu>` search bar to be visible. `search_bar_enabled<class_OptionButton_property_search_bar_enabled>` must be `true` for this to have any effect.
 
 classref-item-separator
 
@@ -356,14 +369,6 @@ classref-method
 `bool<class_bool>` **is_item_separator**(idx: `int<class_int>`) `const (This method has no side effects. It doesn't modify any of the instance's member variables.)` `🔗<class_OptionButton_method_is_item_separator>`
 
 Returns `true` if the item at index `idx` is marked as a separator.
-
-classref-item-separator
-
-classref-method
-
-`bool<class_bool>` **is_search_bar_enabled**() `const (This method has no side effects. It doesn't modify any of the instance's member variables.)` `🔗<class_OptionButton_method_is_search_bar_enabled>`
-
-Returns `true` if the search bar is enabled.
 
 classref-item-separator
 

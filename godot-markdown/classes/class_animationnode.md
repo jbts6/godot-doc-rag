@@ -47,7 +47,7 @@ classref-descriptions-group
 
 classref-signal
 
-**animation_node_removed**(object_id: `int<class_int>`, name: `String<class_String>`) `🔗<class_AnimationNode_signal_animation_node_removed>`
+**animation_node_removed**(object_id: `int<class_int>`, node_name: `String<class_String>`) `🔗<class_AnimationNode_signal_animation_node_removed>`
 
 Emitted by nodes that inherit from this class and that have an internal tree when one of their animation nodes removes. The animation nodes that emit this signal are `AnimationNodeBlendSpace1D<class_AnimationNodeBlendSpace1D>`, `AnimationNodeBlendSpace2D<class_AnimationNodeBlendSpace2D>`, `AnimationNodeStateMachine<class_AnimationNodeStateMachine>`, and `AnimationNodeBlendTree<class_AnimationNodeBlendTree>`.
 

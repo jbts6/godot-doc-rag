@@ -129,7 +129,7 @@ classref-descriptions-group
 
 classref-property
 
-`bool<class_bool>` **all_tabs_in_front** = `false` `🔗<class_TabContainer_property_all_tabs_in_front>`
+`bool<class_bool>` **all_tabs_in_front** `🔗<class_TabContainer_property_all_tabs_in_front>`
 
 classref-property-setget
 

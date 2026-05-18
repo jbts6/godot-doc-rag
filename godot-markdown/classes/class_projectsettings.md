@@ -6800,6 +6800,14 @@ classref-item-separator
 
 classref-property
 
+`bool<class_bool>` **rendering/environment/fog/use_legacy_blending** = `false` `🔗<class_ProjectSettings_property_rendering/environment/fog/use_legacy_blending>`
+
+Enables legacy fog blending behavior from version 4.5 and earlier. This is intended for users who are developing on pre-4.6 versions and want to upgrade to 4.6 with the smallest possible change to their visuals.
+
+classref-item-separator
+
+classref-property
+
 `int<class_int>` **rendering/environment/glow/upscale_mode** = `1` `🔗<class_ProjectSettings_property_rendering/environment/glow/upscale_mode>`
 
 Sets how the glow effect is upscaled before being copied onto the screen. Linear is faster, but looks blocky. Bicubic is slower but looks smooth.

@@ -1076,7 +1076,7 @@ Enums are basically a shorthand for constants, and are pretty useful if you want
     const TILE_SPIKE = 2
     const TILE_TELEPORT = 3
 
-If you pass a name to the enum, it will put all the keys inside a constant `Dictionary <class_Dictionary>` of that name. This means all constant methods of a dictionary can also be used with a named enum.
+If you pass a name to the enum, it will put all the keys inside a constant `Dictionary <class_Dictionary>` of that name. This means all constant methods of a dictionary can also be used with a named enum. This only works for GDScript enums, not for enums from built-in classes.
 
 > [!IMPORTANT]
 > Keys in a named enum are not registered as global constants. They should be accessed prefixed by the enum's name (`Name.KEY`).
@@ -2143,6 +2143,24 @@ This also means that returning a signal from a function that isn't a coroutine w
 
 > [!NOTE]
 > Unlike `yield` in previous Godot versions, you cannot obtain the function state object. This is done to ensure type safety. With this type safety in place, a function cannot say that it returns an `int` while it actually returns a function state object during runtime.
+
+You can store the arguments passed to the signal's parameters. If there is only one parameter, the awaited value will have the same type as the argument:
+
+    func toggled():
+        var signal_args = await $Button.toggled
+        assert(typeof(signal_args) == TYPE_BOOL)
+
+If there is more than one parameter, the awaited value will be of type `Array`:
+
+    func request_completed():
+        var signal_args = await $HTTPRequest.request_completed
+        assert(typeof(signal_args) == TYPE_ARRAY)
+
+Otherwise, the awaited value will be `null`:
+
+    func button_up():
+        var signal_args = await $Button.button_up
+        assert(signal_args == null)
 
 ## Assert keyword
 

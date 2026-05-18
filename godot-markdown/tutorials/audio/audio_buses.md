@@ -63,8 +63,8 @@ For information on what each effect does, see `doc_audio_effects`.
 
 There is no need to disable buses manually when not in use. Godot detects that the bus has been silent for a few seconds and disables it (including all effects).
 
-<img src="img/audio_buses5.webp" alt="Disabled buses have a blue VU meter instead of a red-green one." />
-Disabled buses have a blue VU meter instead of a red-green one.
+<img src="img/audio_buses5.webp" alt="Disabled buses have a dark blue VU meter instead of a red-green one." />
+Disabled buses have a dark blue VU meter instead of a red-green one.
 
 ## Bus rearrangement
 

@@ -30,7 +30,7 @@ See [Banding in Games: A Noisy Rant (PDF)](https://loopit.dk/banding_in_games.pd
 
 ## Depth buffer precision
 
-To sort objects in 3D space, rendering engines rely on a *depth buffer* (also called *Z-buffer*). This buffer has a finite precision: 24-bit on desktop platforms, sometimes 16-bit on mobile platforms (for performance reasons). If two different objects end up on the same buffer value, then Z-fighting will occur. This will materialize as textures flickering back and forth as the camera moves or rotates.
+To sort objects in 3D space, rendering engines rely on a *depth buffer* (also called *Z-buffer*). This buffer has a finite precision: 32-bit on desktop platforms, 24-bit on mobile platforms (for performance reasons). If two different objects end up on the same buffer value, then Z-fighting will occur. This will materialize as textures flickering back and forth as the camera moves or rotates.
 
 To make the depth buffer more precise over the rendered area, you should *increase* the Camera node's **Near** property. However, be careful: if you set it too high, players will be able to see through nearby geometry. You should also *decrease* the Camera node's **Far** property to the lowest permissible value for your use case, though keep in mind it won't impact precision as much as the **Near** property.
 

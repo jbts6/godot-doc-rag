@@ -31,7 +31,9 @@ Unlike desktop GPUs, mobile GPUs perform *tile-based rendering*. Instead of rend
 
 The problem is that this introduces bottlenecks in our traditional approach. For desktop rendering, we render all opaque geometry, then handle the background, then transparent geometry, then post-processing. Each pass will need to read the current result into tile memory, perform its operations and then write it out again. We then wait for all tiles to be completed before moving on to the next pass.
 
-The first important change in the mobile renderer is that the mobile renderer does not use the RGBA16F texture formats that the desktop renderer does. Instead, it is using an R10G10B10A2 UNORM texture format. This halves the bandwidth required and has further improvements as mobile hardware often further optimizes for 32-bit formats. The tradeoff is that the mobile renderer has limited HDR capabilities due to the reduced precision and maximum values in the color data.
+The first important change in the mobile renderer is that the mobile renderer does not use the RGBA16F texture formats that the desktop (Forward+) renderer does. Instead, it uses an R10G10B10A2 UNORM texture format unless the `rendering/viewport/hdr_2d<class_ProjectSettings_property_rendering/viewport/hdr_2d>` project setting is enabled. This halves the bandwidth required and has further improvements, as mobile hardware often further optimizes for 32-bit formats. The tradeoff is that by default, the mobile renderer has limited HDR capabilities due to the reduced precision and maximum values in the color data.
+
+When the `rendering/viewport/hdr_2d <class_ProjectSettings_property_rendering/viewport/hdr_2d>` project setting is enabled, the mobile renderer uses the same RGBA16F renderers as Forward+. This allows for full HDR support, but also increases bandwidth usage and can reduce performance on mobile GPUs or integrated graphics.
 
 The second important change is the use of sub-passes whenever possible. Sub-passes allows us to perform the rendering steps end-to-end per tile saving on the overhead introduced by reading from and writing to the tiles between each rendering pass. The ability to use sub-passes is limited by the inability to read neighboring pixels, as we're constrained to working within a single tile.
 
@@ -76,11 +78,11 @@ Both the Forward+ and Mobile `doc_internal_rendering_architecture_methods` are s
 
 **Vulkan context creation:**
 
-- [drivers/vulkan/vulkan_context.cpp](https://github.com/godotengine/godot/blob/4.2/drivers/vulkan/vulkan_context.cpp)
+- [drivers/vulkan/rendering_context_driver_vulkan.cpp](https://github.com/godotengine/godot/blob/4.6/drivers/vulkan/rendering_context_driver_vulkan.cpp)
 
 **Direct3D 12 context creation:**
 
-- [drivers/d3d12/d3d12_context.cpp](https://github.com/godotengine/godot/blob/master/drivers/d3d12/d3d12_context.cpp)
+- [drivers/d3d12/rendering_context_driver_d3d12.cpp](https://github.com/godotengine/godot/blob/4.6/drivers/d3d12/rendering_context_driver_d3d12.cpp)
 
 ### Direct3D 12
 
@@ -102,7 +104,7 @@ Both the Forward+ and Mobile `doc_internal_rendering_architecture_methods` can b
 
 Godot also supports Metal rendering via [MoltenVK](https://github.com/KhronosGroup/MoltenVK), which is used as a fallback when native Metal support is not available (e.g. on x86 macOS).
 
-**This driver is still experimental and only available in Godot 4.4 and later.** See the [pull request that introduced Metal support](https://github.com/godotengine/godot/pull/88199) for more information.
+Since Godot 4.7, Metal 4 is now used when supported. All Apple Silicon hardware supports Metal 4, but it must be running macOS 26 or later, or iOS 26 or later. Metal 3 is automatically used as a fallback on older macOS and iOS versions. See the [pull request that introduced Metal 4 support](https://github.com/godotengine/godot/pull/114484) for more information.
 
 ### OpenGL
 
@@ -141,15 +143,16 @@ This means that when writing code for modern rendering methods, you don't actual
 
 **Vulkan RenderingDevice implementation:**
 
-- [drivers/vulkan/rendering_device_driver_vulkan.cpp](https://github.com/godotengine/godot/blob/master/drivers/vulkan/rendering_device_driver_vulkan.cpp)
+- [drivers/vulkan/rendering_device_driver_vulkan.cpp](https://github.com/godotengine/godot/blob/4.6/drivers/vulkan/rendering_device_driver_vulkan.cpp)
 
 **Direct3D 12 RenderingDevice implementation:**
 
-- [drivers/d3d12/rendering_device_driver_d3d12.cpp](https://github.com/godotengine/godot/blob/master/drivers/d3d12/rendering_device_driver_d3d12.cpp)
+- [drivers/d3d12/rendering_device_driver_d3d12.cpp](https://github.com/godotengine/godot/blob/4.6/drivers/d3d12/rendering_device_driver_d3d12.cpp)
 
 **Metal RenderingDevice implementation:**
 
-- [drivers/metal/rendering_device_driver_metal.mm](https://github.com/godotengine/godot/blob/master/drivers/metal/rendering_device_driver_metal.mm)
+- [drivers/metal/rendering_device_driver_metal.cpp](https://github.com/godotengine/godot/blob/master/drivers/metal/rendering_device_driver_metal.cpp) - Metal 4
+- [drivers/metal/rendering_device_driver_metal3.cpp](https://github.com/godotengine/godot/blob/master/drivers/metal/rendering_device_driver_metal3.cpp) - Metal 3
 
 ## Core rendering classes architecture
 
@@ -182,22 +185,22 @@ By convention, shader files with `_inc` in their name are included in other GLSL
 
 **Core GLSL material shaders:**
 
-- Forward+: [servers/rendering/renderer_rd/shaders/forward_clustered/scene_forward_clustered.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/forward_clustered/scene_forward_clustered.glsl)
-- Mobile: [servers/rendering/renderer_rd/shaders/forward_mobile/scene_forward_mobile.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/forward_mobile/scene_forward_mobile.glsl)
-- Compatibility: [drivers/gles3/shaders/scene.glsl](https://github.com/godotengine/godot/blob/4.2/drivers/gles3/shaders/scene.glsl)
+- Forward+: [servers/rendering/renderer_rd/shaders/forward_clustered/scene_forward_clustered.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/forward_clustered/scene_forward_clustered.glsl)
+- Mobile: [servers/rendering/renderer_rd/shaders/forward_mobile/scene_forward_mobile.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/forward_mobile/scene_forward_mobile.glsl)
+- Compatibility: [drivers/gles3/shaders/scene.glsl](https://github.com/godotengine/godot/blob/4.6/drivers/gles3/shaders/scene.glsl)
 
 **Material shader generation:**
 
-- [scene/resources/material.cpp](https://github.com/godotengine/godot/blob/4.2/scene/resources/material.cpp)
+- [scene/resources/material.cpp](https://github.com/godotengine/godot/blob/4.6/scene/resources/material.cpp)
 
 **Other GLSL shaders for Forward+ and Mobile rendering methods:**
 
-- [servers/rendering/renderer_rd/shaders/](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/)
-- [modules/lightmapper_rd/](https://github.com/godotengine/godot/blob/4.2/modules/lightmapper_rd)
+- [servers/rendering/renderer_rd/shaders/](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/)
+- [modules/lightmapper_rd/](https://github.com/godotengine/godot/blob/4.6/modules/lightmapper_rd)
 
 **Other GLSL shaders for the Compatibility rendering method:**
 
-- [drivers/gles3/shaders/](https://github.com/godotengine/godot/blob/4.2/drivers/gles3/shaders/)
+- [drivers/gles3/shaders/](https://github.com/godotengine/godot/blob/4.6/drivers/gles3/shaders/)
 
 ## 2D and 3D rendering separation
 
@@ -216,11 +219,11 @@ Dynamic resolution scaling isn't supported yet, but is planned in a future Godot
 
 **2D and 3D rendering buffer configuration C++ code:**
 
-- [servers/rendering/renderer_rd/storage_rd/render_scene_buffers_rd.cpp](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/storage_rd/render_scene_buffers_rd.cpp)
+- [servers/rendering/renderer_rd/storage_rd/render_scene_buffers_rd.cpp](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/storage_rd/render_scene_buffers_rd.cpp)
 
 **FSR 1.0:**
 
-- [servers/rendering/renderer_rd/effects/fsr.cpp](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/effects/fsr.cpp)
+- [servers/rendering/renderer_rd/effects/fsr.cpp](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/effects/fsr.cpp)
 - [thirdparty/amd-fsr/](https://github.com/godotengine/godot/tree/master/thirdparty/amd-fsr)
 
 ## 2D rendering techniques
@@ -235,9 +238,13 @@ A 2D signed distance field representing LightOccluder2D nodes in the viewport is
 
 **2D SDF generation GLSL shader:**
 
-- [servers/rendering/renderer_rd/shaders/canvas_sdf.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/canvas_sdf.glsl)
+- [servers/rendering/renderer_rd/shaders/canvas_sdf.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/canvas_sdf.glsl)
 
 ## 3D rendering techniques
+
+### Reverse Z
+
+All of Godot's renderers use reverse Z. This means that the depth buffer is inverted, with `1.0` representing the near plane and `0.0` representing the far plane. This allows for [better precision](https://developer.nvidia.com/content/depth-precision-visualized), especially at long distances.
 
 ### Batching and instancing
 
@@ -287,11 +294,11 @@ Alternatively, FSR 2.2 can be used as an upscaling solution that also provides i
 
 **TAA resolve:**
 
-- [servers/rendering/renderer_rd/shaders/effects/taa_resolve.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/effects/taa_resolve.glsl)
+- [servers/rendering/renderer_rd/shaders/effects/taa_resolve.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/effects/taa_resolve.glsl)
 
 **FSR 2.2:**
 
-- [servers/rendering/renderer_rd/effects/fsr2.cpp](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/effects/fsr2.cpp)
+- [servers/rendering/renderer_rd/effects/fsr2.cpp](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/effects/fsr2.cpp)
 - [servers/rendering/renderer_rd/shaders/effects/fsr2/](https://github.com/godotengine/godot/tree/master/servers/rendering/renderer_rd/shaders/effects/fsr2)
 - [thirdparty/amd-fsr2/](https://github.com/godotengine/godot/tree/master/thirdparty/amd-fsr2)
 
@@ -308,32 +315,32 @@ Lightmap baking happens on the GPU using Vulkan compute shaders. The GPU-based l
 
 **Core GI C++ code:**
 
-- [servers/rendering/renderer_rd/environment/gi.cpp](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/environment/gi.cpp)
-- [scene/3d/voxel_gi.cpp](https://github.com/godotengine/godot/blob/4.2/scene/3d/voxel_gi.cpp) - VoxelGI node
-- [editor/plugins/voxel_gi_editor_plugin.cpp](https://github.com/godotengine/godot/blob/4.2/editor/plugins/voxel_gi_editor_plugin.cpp) - Editor UI for the VoxelGI node
+- [servers/rendering/renderer_rd/environment/gi.cpp](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/environment/gi.cpp)
+- [scene/3d/voxel_gi.cpp](https://github.com/godotengine/godot/blob/4.6/scene/3d/voxel_gi.cpp) - VoxelGI node
+- [editor/scene/3d/voxel_gi_editor_plugin.cpp](https://github.com/godotengine/godot/blob/4.6/editor/scene/3d/voxel_gi_editor_plugin.cpp) - Editor UI for the VoxelGI node
 
 **Core GI GLSL shaders:**
 
-- [servers/rendering/renderer_rd/shaders/environment/voxel_gi.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/environment/voxel_gi.glsl)
-- [servers/rendering/renderer_rd/shaders/environment/voxel_gi_debug.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/environment/voxel_gi_debug.glsl) - VoxelGI debug draw mode
-- [servers/rendering/renderer_rd/shaders/environment/sdfgi_debug.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/environment/sdfgi_debug.glsl) - SDFGI Cascades debug draw mode
-- [servers/rendering/renderer_rd/shaders/environment/sdfgi_debug_probes.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/environment/sdfgi_debug_probes.glsl) - SDFGI Probes debug draw mode
-- [servers/rendering/renderer_rd/shaders/environment/sdfgi_integrate.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/environment/sdfgi_integrate.glsl)
-- [servers/rendering/renderer_rd/shaders/environment/sdfgi_preprocess.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/environment/sdfgi_preprocess.glsl)
-- [servers/rendering/renderer_rd/shaders/environment/sdfgi_direct_light.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/environment/sdfgi_direct_light.glsl)
+- [servers/rendering/renderer_rd/shaders/environment/voxel_gi.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/environment/voxel_gi.glsl)
+- [servers/rendering/renderer_rd/shaders/environment/voxel_gi_debug.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/environment/voxel_gi_debug.glsl) - VoxelGI debug draw mode
+- [servers/rendering/renderer_rd/shaders/environment/sdfgi_debug.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/environment/sdfgi_debug.glsl) - SDFGI Cascades debug draw mode
+- [servers/rendering/renderer_rd/shaders/environment/sdfgi_debug_probes.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/environment/sdfgi_debug_probes.glsl) - SDFGI Probes debug draw mode
+- [servers/rendering/renderer_rd/shaders/environment/sdfgi_integrate.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/environment/sdfgi_integrate.glsl)
+- [servers/rendering/renderer_rd/shaders/environment/sdfgi_preprocess.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/environment/sdfgi_preprocess.glsl)
+- [servers/rendering/renderer_rd/shaders/environment/sdfgi_direct_light.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/environment/sdfgi_direct_light.glsl)
 
 **Lightmapper C++ code:**
 
-- [scene/3d/lightmap_gi.cpp](https://github.com/godotengine/godot/blob/4.2/scene/3d/lightmap_gi.cpp) - LightmapGI node
-- [editor/plugins/lightmap_gi_editor_plugin.cpp](https://github.com/godotengine/godot/blob/4.2/editor/plugins/lightmap_gi_editor_plugin.cpp) - Editor UI for the LightmapGI node
-- [scene/3d/lightmapper.cpp](https://github.com/godotengine/godot/blob/4.2/scene/3d/lightmapper.cpp) - Abstract class
-- [modules/lightmapper_rd/lightmapper_rd.cpp](https://github.com/godotengine/godot/blob/4.2/modules/lightmapper_rd/lightmapper_rd.cpp) - GPU-based lightmapper implementation
+- [scene/3d/lightmap_gi.cpp](https://github.com/godotengine/godot/blob/4.6/scene/3d/lightmap_gi.cpp) - LightmapGI node
+- [editor/scene/3d/lightmap_gi_editor_plugin.cpp](https://github.com/godotengine/godot/blob/4.6/editor/scene/3d/lightmap_gi_editor_plugin.cpp) - Editor UI for the LightmapGI node
+- [scene/3d/lightmapper.cpp](https://github.com/godotengine/godot/blob/4.6/scene/3d/lightmapper.cpp) - Abstract class
+- [modules/lightmapper_rd/lightmapper_rd.cpp](https://github.com/godotengine/godot/blob/4.6/modules/lightmapper_rd/lightmapper_rd.cpp) - GPU-based lightmapper implementation
 
 **Lightmapper GLSL shaders:**
 
-- [modules/lightmapper_rd/lm_raster.glsl](https://github.com/godotengine/godot/blob/4.2/modules/lightmapper_rd/lm_raster.glsl)
-- [modules/lightmapper_rd/lm_compute.glsl](https://github.com/godotengine/godot/blob/4.2/modules/lightmapper_rd/lm_compute.glsl)
-- [modules/lightmapper_rd/lm_blendseams.glsl](https://github.com/godotengine/godot/blob/4.2/modules/lightmapper_rd/lm_blendseams.glsl)
+- [modules/lightmapper_rd/lm_raster.glsl](https://github.com/godotengine/godot/blob/4.6/modules/lightmapper_rd/lm_raster.glsl)
+- [modules/lightmapper_rd/lm_compute.glsl](https://github.com/godotengine/godot/blob/4.6/modules/lightmapper_rd/lm_compute.glsl)
+- [modules/lightmapper_rd/lm_blendseams.glsl](https://github.com/godotengine/godot/blob/4.6/modules/lightmapper_rd/lm_blendseams.glsl)
 
 ### Depth of field
 
@@ -346,15 +353,15 @@ Box, hexagon and circle bokeh shapes are available (from fastest to slowest). De
 
 **Depth of field C++ code:**
 
-- [servers/rendering/renderer_rd/effects/bokeh_dof.cpp](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/effects/bokeh_dof.cpp)
+- [servers/rendering/renderer_rd/effects/bokeh_dof.cpp](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/effects/bokeh_dof.cpp)
 
 **Depth of field GLSL shader (compute - used for Forward+):**
 
-- [servers/rendering/renderer_rd/shaders/effects/bokeh_dof.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/effects/bokeh_dof.glsl)
+- [servers/rendering/renderer_rd/shaders/effects/bokeh_dof.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/effects/bokeh_dof.glsl)
 
 **Depth of field GLSL shader (raster - used for Mobile):**
 
-- [servers/rendering/renderer_rd/shaders/effects/bokeh_dof_raster.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/effects/bokeh_dof_raster.glsl)
+- [servers/rendering/renderer_rd/shaders/effects/bokeh_dof_raster.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/effects/bokeh_dof_raster.glsl)
 
 ### Screen-space effects (SSAO, SSIL, SSR, SSS)
 
@@ -369,33 +376,37 @@ When both SSAO and SSIL are enabled, parts of SSAO and SSIL are shared to reduce
 
 SSAO, SSIL, and SSR are performed at half resolution by default to improve performance.
 
+SSR makes use of a Hi-Z buffer to improve performance. This Hi-Z buffer is generated from the depth buffer in a compute shader. See the [pull request that overhauled SSR](https://github.com/godotengine/godot/pull/111210) for more information.
+
 **Screen-space effects C++ code:**
 
-- [servers/rendering/renderer_rd/effects/ss_effects.cpp](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/effects/ss_effects.cpp)
+- [servers/rendering/renderer_rd/effects/ss_effects.cpp](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/effects/ss_effects.cpp)
 
 **Screen-space ambient occlusion GLSL shader:**
 
-- [servers/rendering/renderer_rd/shaders/effects/ssao.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/effects/ssao.glsl)
-- [servers/rendering/renderer_rd/shaders/effects/ssao_blur.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/effects/ssao_blur.glsl)
-- [servers/rendering/renderer_rd/shaders/effects/ssao_interleave.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/effects/ssao_interleave.glsl)
-- [servers/rendering/renderer_rd/shaders/effects/ssao_importance_map.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/effects/ssao_importance_map.glsl)
+- [servers/rendering/renderer_rd/shaders/effects/ssao.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/effects/ssao.glsl)
+- [servers/rendering/renderer_rd/shaders/effects/ssao_blur.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/effects/ssao_blur.glsl)
+- [servers/rendering/renderer_rd/shaders/effects/ssao_interleave.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/effects/ssao_interleave.glsl)
+- [servers/rendering/renderer_rd/shaders/effects/ssao_importance_map.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/effects/ssao_importance_map.glsl)
 
 **Screen-space indirect lighting GLSL shader:**
 
-- [servers/rendering/renderer_rd/shaders/effects/ssil.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/effects/ssil.glsl)
-- [servers/rendering/renderer_rd/shaders/effects/ssil_blur.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/effects/ssil_blur.glsl)
-- [servers/rendering/renderer_rd/shaders/effects/ssil_interleave.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/effects/ssil_interleave.glsl)
-- [servers/rendering/renderer_rd/shaders/effects/ssil_importance_map.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/effects/ssil_importance_map.glsl)
+- [servers/rendering/renderer_rd/shaders/effects/ssil.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/effects/ssil.glsl)
+- [servers/rendering/renderer_rd/shaders/effects/ssil_blur.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/effects/ssil_blur.glsl)
+- [servers/rendering/renderer_rd/shaders/effects/ssil_interleave.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/effects/ssil_interleave.glsl)
+- [servers/rendering/renderer_rd/shaders/effects/ssil_importance_map.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/effects/ssil_importance_map.glsl)
 
 **Screen-space reflections GLSL shader:**
 
-- [servers/rendering/renderer_rd/shaders/effects/screen_space_reflection.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/effects/screen_space_reflection.glsl)
-- [servers/rendering/renderer_rd/shaders/effects/screen_space_reflection_scale.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/effects/screen_space_reflection_scale.glsl)
-- [servers/rendering/renderer_rd/shaders/effects/screen_space_reflection_filter.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/effects/screen_space_reflection_filter.glsl)
+- [servers/rendering/renderer_rd/shaders/effects/screen_space_reflection.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/effects/screen_space_reflection.glsl)
+- [servers/rendering/renderer_rd/shaders/effects/screen_space_reflection_filter.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/effects/screen_space_reflection_filter.glsl)
+- [servers/rendering/renderer_rd/shaders/effects/screen_space_reflection_resolve.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/effects/screen_space_reflection_resolve.glsl)
+- [servers/rendering/renderer_rd/shaders/effects/screen_space_reflection_hiz.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/effects/screen_space_reflection_hiz.glsl)
+- [servers/rendering/renderer_rd/shaders/effects/screen_space_reflection_downsample.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/effects/screen_space_reflection_downsample.glsl)
 
 **Subsurface scattering GLSL:**
 
-- [servers/rendering/renderer_rd/shaders/effects/subsurface_scattering.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/effects/subsurface_scattering.glsl)
+- [servers/rendering/renderer_rd/shaders/effects/subsurface_scattering.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/effects/subsurface_scattering.glsl)
 
 ### Sky rendering
 
@@ -409,9 +420,9 @@ A detailed technical implementation can be found in the [Custom sky shaders in G
 
 **Sky rendering C++ code:**
 
-- [servers/rendering/renderer_rd/environment/sky.cpp](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/environment/sky.cpp) - Sky rendering
-- [scene/resources/sky.cpp](https://github.com/godotengine/godot/blob/4.2/scene/resources/sky.cpp) - Sky resource (not to be confused with sky rendering)
-- [scene/resources/sky_material.cpp](https://github.com/godotengine/godot/blob/4.2/scene/resources/sky_material.cpp) SkyMaterial resources (used in the Sky resource)
+- [servers/rendering/renderer_rd/environment/sky.cpp](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/environment/sky.cpp) - Sky rendering
+- [scene/resources/sky.cpp](https://github.com/godotengine/godot/blob/4.6/scene/resources/sky.cpp) - Sky resource (not to be confused with sky rendering)
+- [scene/resources/3d/sky_material.cpp](https://github.com/godotengine/godot/blob/4.6/scene/resources/3d/sky_material.cpp) SkyMaterial resources (used in the Sky resource)
 
 **Sky rendering GLSL shader:**
 
@@ -430,20 +441,20 @@ A detailed technical explanation can be found in the [Fog Volumes arrive in Godo
 
 **Volumetric fog C++ code:**
 
-- [servers/rendering/renderer_rd/environment/fog.cpp](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/environment/fog.cpp) - General volumetric fog
-- [scene/3d/fog_volume.cpp](https://github.com/godotengine/godot/blob/4.2/scene/3d/fog_volume.cpp) - FogVolume node
-- [scene/resources/fog_material.cpp](https://github.com/godotengine/godot/blob/4.2/scene/resources/fog_material.cpp) - FogMaterial resource (used by FogVolume)
+- [servers/rendering/renderer_rd/environment/fog.cpp](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/environment/fog.cpp) - General volumetric fog
+- [scene/3d/fog_volume.cpp](https://github.com/godotengine/godot/blob/4.6/scene/3d/fog_volume.cpp) - FogVolume node
+- [scene/resources/3d/fog_material.cpp](https://github.com/godotengine/godot/blob/4.6/scene/resources/3d/fog_material.cpp) - FogMaterial resource (used by FogVolume)
 
 **Volumetric fog GLSL shaders:**
 
-- [servers/rendering/renderer_rd/shaders/environment/volumetric_fog.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/environment/volumetric_fog.glsl)
-- [servers/rendering/renderer_rd/shaders/environment/volumetric_fog_process.glsl](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_rd/shaders/environment/volumetric_fog_process.glsl)
+- [servers/rendering/renderer_rd/shaders/environment/volumetric_fog.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/environment/volumetric_fog.glsl)
+- [servers/rendering/renderer_rd/shaders/environment/volumetric_fog_process.glsl](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_rd/shaders/environment/volumetric_fog_process.glsl)
 
 ### Occlusion culling
 
 While modern GPUs can handle drawing a lot of triangles, the number of draw calls in complex scenes can still be a bottleneck (even with Vulkan, Direct3D 12, and Metal).
 
-Godot 4 supports occlusion culling to reduce overdraw (when the depth prepass is disabled) and reduce vertex throughput. This is done by rasterizing a low-resolution buffer on the CPU using [Embree](https://github.com/embree/embree). The buffer's resolution depends on the number of CPU threads on the system, as this is done in parallel. This buffer includes occluder shapes that were baked in the editor or created at runtime.
+Godot 4 supports occlusion culling to reduce overdraw (when the depth prepass is disabled) and reduce vertex throughput. This is done by rasterizing a low-resolution buffer on the CPU using [Embree](https://github.com/embree/embree). The buffer's resolution depends on the number of CPU threads on the system, as this is done in parallel. This buffer includes occluder shapes that were baked in the editor or created at runtime. The occlusion culling buffer is jittered by a small amount every frame to help reduce under-sampling artifacts, which would lead to false positives (objects getting occluded when they shouldn't be).
 
 As complex occluders can introduce a lot of strain on the CPU, baked occluders can be simplified automatically when generated in the editor.
 
@@ -459,8 +470,8 @@ Occlusion culling is performed by registering occluder meshes, which is done usi
 
 **Occlusion culling C++ code:**
 
-- [scene/3d/occluder_instance_3d.cpp](https://github.com/godotengine/godot/blob/4.2/scene/3d/occluder_instance_3d.cpp)
-- [servers/rendering/renderer_scene_occlusion_cull.cpp](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_scene_occlusion_cull.cpp)
+- [scene/3d/occluder_instance_3d.cpp](https://github.com/godotengine/godot/blob/4.6/scene/3d/occluder_instance_3d.cpp)
+- [servers/rendering/renderer_scene_occlusion_cull.cpp](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_scene_occlusion_cull.cpp)
 
 ### Visibility range (LOD)
 
@@ -470,7 +481,7 @@ In RenderingSceneCull, the `_scene_cull()` and `_render_scene()` functions are w
 
 **Visibility range C++ code:**
 
-- [servers/rendering/renderer_scene_cull.cpp](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_scene_cull.cpp)
+- [servers/rendering/renderer_scene_cull.cpp](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_scene_cull.cpp)
 
 ### Automatic mesh LOD
 
@@ -486,8 +497,8 @@ To improve performance, shadow rendering and reflection probe rendering also cho
 
 **Mesh LOD generation on import C++ code:**
 
-- [scene/resources/importer_mesh.cpp](https://github.com/godotengine/godot/blob/4.2/scene/resources/importer_mesh.cpp)
+- [scene/resources/3d/importer_mesh.cpp](https://github.com/godotengine/godot/blob/4.6/scene/resources/3d/importer_mesh.cpp)
 
 **Mesh LOD determination C++ code:**
 
-- [servers/rendering/renderer_scene_cull.cpp](https://github.com/godotengine/godot/blob/4.2/servers/rendering/renderer_scene_cull.cpp)
+- [servers/rendering/renderer_scene_cull.cpp](https://github.com/godotengine/godot/blob/4.6/servers/rendering/renderer_scene_cull.cpp)

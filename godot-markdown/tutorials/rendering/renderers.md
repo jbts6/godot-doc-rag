@@ -208,9 +208,9 @@ See `doc_lights_and_shadows` for more information.
 
 <tr>
 <td>Lighting approach</td>
-<td>Forward</td>
-<td>Forward</td>
-<td>Clustered Forward</td>
+<td>Forward single-pass. Lights with shadows use a multi-pass approach and less accurate blending.</td>
+<td>Forward single-pass.</td>
+<td>Clustered forward.</td>
 </tr>
 <tr>
 <td>Maximum OmniLights</td>
@@ -506,6 +506,28 @@ See `doc_shading_reference` for more information.
 </tr>
 
 <tr>
+<td>Color precision</td>
+<td>RGBA8. Low dynamic range, medium precision.</td>
+<td>RGB10A2. Medium dynamic range, low precision. RGBA16F if HDR 2D is enabled.</td>
+<td>RGBA16F. High dynamic range, good precision.</td>
+</tr>
+<tr>
+<td>Depth precision</td>
+<td>24-bit without reverse Z. Medium precision.</td>
+<td>24-bit with reverse Z. Medium precision.</td>
+<td>32-bit with reverse Z. Good precision.</td>
+</tr>
+<tr>
+<td>Debanding</td>
+<td>❌ Not supported.</td>
+<td colspan="2"><dl>
+<dt>✔️ Supported. | ✔️ Supported. |</dt>
+<dd>
+
+</dd>
+</dl></td>
+</tr>
+<tr>
 <td>Variable rate shading</td>
 <td>❌ Not supported.</td>
 <td colspan="2"><dl>
@@ -547,6 +569,11 @@ See `doc_shading_reference` for more information.
 </tr>
 <tr>
 <td>2D HDR Viewport</td>
+<td>❌ Not supported.</td>
+<td colspan="2">✔️ Supported. | ✔️ Supported. |</td>
+</tr>
+<tr>
+<td>HDR output</td>
 <td>❌ Not supported.</td>
 <td colspan="2">✔️ Supported. | ✔️ Supported. |</td>
 </tr>

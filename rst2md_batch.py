@@ -114,8 +114,8 @@ def main():
     parser.add_argument(
         "-w", "--workers",
         type=int,
-        default=4,
-        help="并行进程数 (默认: 4)",
+        default=8,
+        help="并行进程数 (默认: 8)",
     )
     parser.add_argument(
         "--dry-run",
@@ -138,16 +138,28 @@ def main():
         print(f"错误: 目录不存在 → {input_root}", file=sys.stderr)
         sys.exit(1)
 
-    rst_files = sorted(input_root.rglob("*.rst"))
+    # 过滤文件
+    rst_files = []
+    for rst in input_root.rglob("*.rst"):
+        rel = rst.relative_to(input_root)
+        # 跳过 about 和 community 文件夹
+        if "about" in rel.parts or "community" in rel.parts:
+            continue
+        # 跳过 404 和 index 文件
+        if rel.stem in ["404", "index"]:
+            continue
+        rst_files.append(rst)
+    
+    rst_files = sorted(rst_files)
     total = len(rst_files)
 
     if total == 0:
-        print(f"未找到 .rst 文件: {input_root}")
+        print(f"未找到需要处理的 .rst 文件: {input_root}")
         return
 
     print(f"输入目录: {input_root}")
     print(f"输出目录: {output_root}")
-    print(f"找到 {total} 个 .rst 文件\n")
+    print(f"找到 {total} 个 .rst 文件（已跳过 about/community 文件夹及 404/index 文件）\n")
 
     if args.dry_run:
         for rst in rst_files:

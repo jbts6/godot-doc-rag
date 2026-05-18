@@ -53,7 +53,7 @@ classref-item-separator
 
 classref-signal
 
-**current_animation_changed**(name: `StringName<class_StringName>`) `🔗<class_AnimationPlayer_signal_current_animation_changed>`
+**current_animation_changed**(anim_name: `StringName<class_StringName>`) `🔗<class_AnimationPlayer_signal_current_animation_changed>`
 
 Emitted when `current_animation<class_AnimationPlayer_property_current_animation>` changes.
 

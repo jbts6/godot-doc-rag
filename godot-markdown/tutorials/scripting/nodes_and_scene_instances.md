@@ -90,7 +90,7 @@ You can store the newly created node's reference in a variable and call `add_chi
 var sprite2d
 
 func ready():
-var sprite2d = Sprite2D.new() \# Create a new Sprite2D. add_child(sprite2d) \# Add it as a child of this node.
+sprite2d = Sprite2D.new() \# Create a new Sprite2D. add_child(sprite2d) \# Add it as a child of this node.
 
 csharp
 

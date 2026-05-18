@@ -31,17 +31,17 @@ classref-descriptions-group
 
 classref-signal
 
-**animation_added**(name: `StringName<class_StringName>`) `🔗<class_AnimationLibrary_signal_animation_added>`
+**animation_added**(anim_name: `StringName<class_StringName>`) `🔗<class_AnimationLibrary_signal_animation_added>`
 
-Emitted when an `Animation<class_Animation>` is added, under the key `name`.
+Emitted when an `Animation<class_Animation>` is added, under the key `anim_name`.
 
 classref-item-separator
 
 classref-signal
 
-**animation_changed**(name: `StringName<class_StringName>`) `🔗<class_AnimationLibrary_signal_animation_changed>`
+**animation_changed**(anim_name: `StringName<class_StringName>`) `🔗<class_AnimationLibrary_signal_animation_changed>`
 
-Emitted when there's a change in one of the animations, e.g. tracks are added, moved or have changed paths. `name` is the key of the animation that was changed.
+Emitted when there's a change in one of the animations, e.g. tracks are added, moved or have changed paths. `anim_name` is the key of the animation that was changed.
 
 See also `Resource.changed<class_Resource_signal_changed>`, which this acts as a relay for.
 
@@ -49,17 +49,17 @@ classref-item-separator
 
 classref-signal
 
-**animation_removed**(name: `StringName<class_StringName>`) `🔗<class_AnimationLibrary_signal_animation_removed>`
+**animation_removed**(anim_name: `StringName<class_StringName>`) `🔗<class_AnimationLibrary_signal_animation_removed>`
 
-Emitted when an `Animation<class_Animation>` stored with the key `name` is removed.
+Emitted when an `Animation<class_Animation>` stored with the key `anim_name` is removed.
 
 classref-item-separator
 
 classref-signal
 
-**animation_renamed**(name: `StringName<class_StringName>`, to_name: `StringName<class_StringName>`) `🔗<class_AnimationLibrary_signal_animation_renamed>`
+**animation_renamed**(old_name: `StringName<class_StringName>`, new_name: `StringName<class_StringName>`) `🔗<class_AnimationLibrary_signal_animation_renamed>`
 
-Emitted when the key for an `Animation<class_Animation>` is changed, from `name` to `to_name`.
+Emitted when the key for an `Animation<class_Animation>` is changed, from `old_name` to `new_name`.
 
 classref-section-separator
 

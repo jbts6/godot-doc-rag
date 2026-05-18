@@ -49,6 +49,14 @@ classref-item-separator
 
 classref-method
 
+`bool<class_bool>` **\_can_commit_handle_on_click**() `virtual (This method should typically be overridden by the user to have any effect.)` `const (This method has no side effects. It doesn't modify any of the instance's member variables.)` `🔗<class_EditorNode3DGizmoPlugin_private_method__can_commit_handle_on_click>`
+
+Override this method to define whether the gizmos should commit when the final handle position is the same as the initial one. Returns `false` if not overridden.
+
+classref-item-separator
+
+classref-method
+
 `void (No return value.)` **\_commit_handle**(gizmo: `EditorNode3DGizmo<class_EditorNode3DGizmo>`, handle_id: `int<class_int>`, secondary: `bool<class_bool>`, restore: `Variant<class_Variant>`, cancel: `bool<class_bool>`) `virtual (This method should typically be overridden by the user to have any effect.)` `🔗<class_EditorNode3DGizmoPlugin_private_method__commit_handle>`
 
 Override this method to commit a handle being edited (handles must have been previously added by `EditorNode3DGizmo.add_handles()<class_EditorNode3DGizmo_method_add_handles>` during `_redraw()<class_EditorNode3DGizmoPlugin_private_method__redraw>`). This usually means creating an `UndoRedo<class_UndoRedo>` action for the change, using the current handle value as "do" and the `restore` argument as "undo".

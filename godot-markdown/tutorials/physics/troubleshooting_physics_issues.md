@@ -6,7 +6,7 @@ While many of these issues can be resolved through configuration, some of them a
 
 ## Objects are passing through each other at high speeds
 
-This is known as *tunneling*. Enabling **Continuous CD** in the RigidBody properties can sometimes resolve this issue. If this does not help, there are other solutions you can try:
+This is known as *tunneling*. Enabling **Continuous CD** (Continuous Collision Detection) in the RigidBody properties can sometimes resolve this issue. If this does not help, there are other solutions you can try:
 
 - Make your static collision shapes thicker. For example, if you have a thin floor that the player can't get below in some way, you can make the collider thicker than the floor's visual representation.
 - Modify your fast-moving object's collision shape depending on its movement speed. The faster the object moves, the larger the collision shape should extend outside of the object to ensure it can collide with thin walls more reliably.
